@@ -1,0 +1,13 @@
+[package]
+name = "mmtest"
+version = "0.1.0"
+authors = ["jorian <jorian@outlook.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mmapi = { path = "../mmapi" }
+cursive = "0.13.0"
+reqwest = "0.9"
+serde_json = "1.0.40"
