@@ -1,38 +1,206 @@
 extern crate cursive;
 extern crate reqwest;
 extern crate serde;
+extern crate dirs;
 
 use cursive::{Cursive, CbSink};
 use cursive::traits::*;
-use cursive::views::{Panel, BoxView, LinearLayout, DummyView, TextView, EditView, Button, ListView, SelectView, Dialog};
+use cursive::views::{Panel, BoxView, LinearLayout, DummyView, TextView, EditView, Button, ListView, SelectView, Dialog, TextArea};
 use cursive::view::{ViewWrapper, SizeConstraint};
 use cursive::align::*;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::fs::File;
-use std::fs;
+use std::{fs, thread};
+
 use std::io::Write;
+use std::sync::mpsc;
 use serde_json::Value;
+use cursive::event::Key;
+use mmapi::types::response::Balance;
+use std::error::Error;
+use std::process::Command;
+
 
 fn main() {
-    let client = Arc::new(mmapi::Client::new("23y4g23g23jgjgjH3GJHGJKHg34"));
+//    let client = Arc::new(mmapi::Client::new("23y4g23g23jgjgjH3GJHGJKHg34"));
     // marketmaker: marketmaker::Marketmaker::new().with_coins.etc.etc
 
-    let mut siv: Cursive = Cursive::default();
+    let controller = Controller::new();
+    match controller {
+        Ok(mut controller) => controller.run(),
+        Err(e) => println!("Error: {}", e),
+    }
 
-    let cb_sink = siv.cb_sink().clone();
-    let loginview = LoginView::new(client.clone(), cb_sink);
 
-    siv.add_layer(loginview);
-    siv.set_autorefresh(true);
+}
 
-    siv.run();
+struct Ui {
+    cursive: Cursive,
+    ui_rx: mpsc::Receiver<UiMessage>,
+    ui_tx: mpsc::Sender<UiMessage>,
+    controller_tx: mpsc::Sender<ControllerMessage>,
+}
+
+pub enum UiMessage {
+    UpdateOutput(String),
+    Balance(String),
+    StartMainLayer
+}
+
+impl Ui {
+    pub fn new(controller_tx: mpsc::Sender<ControllerMessage>) -> Self {
+        let (ui_tx, ui_rx) = mpsc::channel::<UiMessage>();
+
+        let mut ui = Ui {
+            cursive: Cursive::default(),
+            ui_tx,
+            ui_rx,
+            controller_tx
+        };
+
+        // Create a view tree with a TextArea for input, and a
+        // TextView for output.
+
+
+        // Create all views here, send a controller_tx along with it.
+        // whenever a view needs updating, send a message to controller, which sends back
+        // the requested information
+
+        let controller_tx_clone = ui.controller_tx.clone();
+        ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
+
+        // Configure a callback
+        ui.cursive.add_global_callback(Key::Esc, move |c| {
+            // When the user presses Escape, send an
+            // UpdatedInputAvailable message to the controller.
+            let input = c.find_id::<TextArea>("input").unwrap();
+            let text = input.get_content().to_owned();
+            controller_tx_clone.send(
+                ControllerMessage::FetchBalance(text))
+                .unwrap();
+        });
+        ui.cursive.set_autorefresh(true);
+
+        ui
+    }
+
+    /// Step the UI by calling into Cursive's step function, then
+    /// processing any UI messages.
+    pub fn step(&mut self) -> bool {
+        if !self.cursive.is_running() {
+            return false;
+        }
+
+        // Process any pending UI messages
+
+        // if ui_rx has received any message,
+        while let Some(message) = self.ui_rx.try_iter().next() {
+            // check which message
+            match message {
+                UiMessage::UpdateOutput(text) => {
+                    // do what is needed upon that message
+                    let mut output = self.cursive
+                        .find_id::<TextView>("output")
+                        .unwrap();
+                    output.set_content(text);
+                },
+                UiMessage::Balance(balance) => {
+                    let mut output = self.cursive
+                        .find_id::<TextView>("output")
+                        .unwrap();
+                    output.set_content(balance);
+                },
+                UiMessage::StartMainLayer => {
+                    // open main layer here
+                }
+            }
+        }
+
+        // Step the UI
+        self.cursive.step();
+
+        true
+    }
+}
+
+pub struct Controller {
+    rx: mpsc::Receiver<ControllerMessage>,
+    ui: Ui,
+    client: mmapi::Client
+}
+
+pub enum ControllerMessage {
+    UpdatedInputAvailable(String),
+    FetchBalance(String),
+    StartMainLayer(String)
+}
+
+impl Controller {
+    pub fn new() -> Result<Controller, String> {
+        let (tx, rx) = mpsc::channel::<ControllerMessage>();
+
+        Ok(Controller {
+            rx,
+            ui: Ui::new(tx.clone()),
+            // i would need to start marketmaker before starting the controller. which is not possible.
+            // i can initialize a client without userpass, and set it later
+            client: mmapi::Client::new("23y4g23g23jgjgjH3GJHGJKHg34"),
+        })
+    }
+
+    pub fn run(&mut self) {
+        while self.ui.step() {
+            // on each step, clear the message queue that the controller receives
+            while let Some(message) = self.rx.try_iter().next() {
+                match message {
+                    ControllerMessage::UpdatedInputAvailable(text) => {
+                        self.ui
+                            .ui_tx
+                            .send(UiMessage::UpdateOutput(text))
+                            .unwrap();
+                    },
+                    ControllerMessage::FetchBalance(coin) => {
+                        let balance = self.client.balance(&coin).unwrap();
+                        self.ui
+                            .ui_tx
+                            .send(UiMessage::Balance(balance.balance.unwrap()))
+                            .unwrap();
+                    },
+                    ControllerMessage::StartMainLayer(passphrase) => {
+                        let userhome = dirs::home_dir().expect("Unable to get userhome");
+                        let mm2_json = Mm2Json::create(
+                            &self.client.get_userpass(),
+                            passphrase.as_str(),
+                            userhome.to_str().unwrap()
+                        );
+
+                        mm2_json.create_mm2_json();
+
+                        thread::spawn( move || {
+                            let _mm2client =
+                                Command::new("./marketmaker")
+                                    .spawn()
+                                    .expect("Failed to start");
+                        });
+                        self.ui
+                            .ui_tx
+                            .send(UiMessage::StartMainLayer)
+                            .unwrap();
+                    }
+                }
+            }
+        }
+    }
+
+    fn start_marketmaker<T: Into<String>>(passphrase: T, userpass: T) {
+
+    }
 }
 
 struct LoginView {
     view: BoxView<Panel<LinearLayout>>,
-    client: Arc<mmapi::Client>,
 }
 
 impl ViewWrapper for LoginView {
@@ -40,8 +208,7 @@ impl ViewWrapper for LoginView {
 }
 
 impl LoginView {
-    fn new(client: Arc<mmapi::Client>, cb_sink: CbSink) -> Self {
-        let client2 = client.clone();
+    fn new(controller_tx: mpsc::Sender<ControllerMessage>) -> Self {
         let mut loginview = BoxView::with_full_width(Panel::new(
             LinearLayout::horizontal()
             .child(BoxView::with_fixed_width(10, DummyView).squishable())
@@ -63,12 +230,16 @@ impl LoginView {
                             .child(Button::new("Coins",  move |siv| {
                                 // do coin fetching in closure, call cb_sink with data?
                                 // https://stackoverflow.com/questions/33662098/cannot-move-out-of-captured-outer-variable-in-an-fn-closure
-                                //
-                                let coinselection = CoinSelectionView::new(client2.clone());
+
+                                let coinselection = CoinSelectionView::new();
                                 siv.add_layer(coinselection);
                             }))
                             .child(DummyView)
-                            .child(Button::new("Next", |_| ()))
+                            .child(Button::new("Next", move |siv| {
+                                let pp = siv.find_id::<EditView>("passphrase").unwrap();
+                                let pp = pp.get_content().to_string();
+                                controller_tx.send(ControllerMessage::StartMainLayer(pp));
+                            }))
                     }
                     ).squishable())
             )
@@ -80,15 +251,12 @@ impl LoginView {
 
         LoginView {
             view: loginview,
-            client,
         }
     }
 }
 
 struct CoinSelectionView {
     view: BoxView<Panel<LinearLayout>>,
-    client: Arc<mmapi::Client>,
-
 }
 
 impl ViewWrapper for CoinSelectionView {
@@ -96,7 +264,7 @@ impl ViewWrapper for CoinSelectionView {
 }
 
 impl CoinSelectionView {
-    fn new(client: Arc<mmapi::Client>) -> Self {
+    fn new() -> Self {
         fn add_coin(siv: &mut Cursive, s: &String) {
             siv.call_on_id("selected_coins", |view: &mut SelectView<String>| {
                 view.add_item_str(String::from(s))
@@ -193,7 +361,6 @@ impl CoinSelectionView {
                 .child(BoxView::with_min_width(20, DummyView).squishable())
             ).title("Select coins")
             ),
-            client,
         }
     }
 }
@@ -301,4 +468,31 @@ pub struct Coin {
     pub taddr: Option<u16>,
     #[serde(rename = "nSPV", skip_serializing_if = "Option::is_none")]
     pub n_spv: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Mm2Json {
+    gui: String,
+    netid: u16,
+    rpc_password: String,
+    passphrase: String,
+    userhome: String
+}
+
+impl Mm2Json {
+    pub fn create(rpc_password: &str, passphrase: &str, userhome: &str) -> Self {
+        Mm2Json {
+            gui: String::from("MM2GUI"),
+            netid: 9999,
+            rpc_password: rpc_password.to_string(),
+            passphrase: passphrase.to_string(),
+            userhome: userhome.to_string()
+        }
+    }
+
+    pub fn create_mm2_json(&self) {
+        let _file = File::create("MM2.json").unwrap();
+        let serialized_json = serde_json::to_string(&self).unwrap();
+        let _ = fs::write("MM2.json", serialized_json);
+    }
 }
