@@ -21,6 +21,7 @@ use cursive::event::Key;
 use mmapi::types::response::Balance;
 use std::error::Error;
 use std::process::Command;
+use std::time::Duration;
 
 
 fn main() {
@@ -113,7 +114,8 @@ impl Ui {
                     output.set_content(balance);
                 },
                 UiMessage::StartMainLayer => {
-                    // open main layer here
+                    self.cursive.pop_layer();
+                    self.cursive.add_layer(Dialog::around(TextView::new("Started")))
                 }
             }
         }
@@ -184,6 +186,10 @@ impl Controller {
                                     .spawn()
                                     .expect("Failed to start");
                         });
+
+                        thread::sleep(Duration::from_secs(1));
+                        std::fs::remove_file("MM2.json");
+
                         self.ui
                             .ui_tx
                             .send(UiMessage::StartMainLayer)
