@@ -15,7 +15,8 @@ pub struct Ui {
 pub enum UiMessage {
     UpdateOutput(String),
     Balance(String),
-    StartMainLayer
+    StartMainLayer,
+    ElectrumStarted((String, String, String))
 }
 
 impl Ui {
@@ -82,9 +83,21 @@ impl Ui {
                     output.set_content(balance);
                 },
                 UiMessage::StartMainLayer => {
-                    let main_view = crate::main_v::create();
+                    let main_view = crate::main_v::create(self.controller_tx.clone());
                     self.cursive.pop_layer();
                     self.cursive.add_layer(main_view);
+                },
+                UiMessage::ElectrumStarted((coin, address, balance)) => {
+                    // TODO add address in menu
+                    self.cursive.call_on_id(&format!("electrum_balance_{}", &coin), |textview: &mut TextView| {
+                        textview.set_content(&balance)
+                    });
+
+                    dbg!(&address);
+
+                    self.cursive.call_on_id(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
+                        textview.set_content(&address)
+                    });
                 }
             }
         }

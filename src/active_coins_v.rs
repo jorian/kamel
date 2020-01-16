@@ -2,11 +2,14 @@ use cursive::views::{DummyView, Button, TextView, BoxView, LinearLayout, ListVie
 use cursive::align::HAlign;
 use cursive::theme::{BaseColor, Color};
 use cursive::utils::markup::StyledString;
-use cursive::traits::{View, Identifiable};
+use cursive::traits::{View, Identifiable, Boxable};
+
+use std::sync::mpsc;
 
 use crate::coin_management::*;
+use crate::controller::ControllerMessage;
 
-pub fn create() -> Box<dyn View> {
+pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let overview = BoxView::with_full_screen(
         LinearLayout::horizontal()
             .child(
@@ -18,30 +21,21 @@ pub fn create() -> Box<dyn View> {
                     lv.clear();
 
                     for coin in coin_list {
-//                        let client = client.clone();
-
                         let coin_clone = coin.clone();
                         if electrum_list.contains(&coin) {
                             lv.add_child(&coin, LinearLayout::horizontal()
                                 .child(BoxView::with_full_width(DummyView))
+                                .child(TextView::new("").with_id(format!("electrum_coin_{}", coin_clone.clone())))
                                 .child(TextView::new(
-                                    StyledString::styled("not activated", Color::Dark(BaseColor::Red))
-                                )
+                                    StyledString::styled("not activated", Color::Dark(BaseColor::Red)))
                                     .h_align(HAlign::Right)
-                                    .with_id(format!("electrum_balance_{}", coin_clone.clone())))
+                                    .with_id(format!("electrum_balance_{}", coin_clone.clone()))
+                                    .fixed_width(14))
                                 .child(BoxView::with_fixed_width(3, DummyView))
                                 .child({
+                                    let controller_clone = controller_tx.clone();
                                     Button::new("activate", move |siv| {
-//                                        let electrum = client.electrum(&coin_clone, true).unwrap();
-
-//                                        siv.call_on_id(&format!("electrum_balance_{}", &coin_clone), |tv: &mut TextView| {
-//                                            tv.set_content(&electrum.balance.unwrap())
-//                                        });
-//
-//                                        siv.call_on_id(&format!("electrum_activate_{}", &coin_clone), |b: &mut Button| {
-//                                            b.disable();
-//                                        });
-                                        ()
+                                        controller_clone.send(ControllerMessage::ElectrumActivate(coin_clone.clone()));
                                     }).with_id(format!("electrum_activate_{}", String::from(&coin)))
                                 })
                                 .child(DummyView));

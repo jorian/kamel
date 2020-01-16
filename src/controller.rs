@@ -15,7 +15,8 @@ pub struct Controller {
 pub enum ControllerMessage {
     UpdatedInputAvailable(String),
     FetchBalance(String),
-    StartMainLayer(String)
+    StartMainLayer(String),
+    ElectrumActivate(String)
 }
 
 impl Controller {
@@ -73,6 +74,18 @@ impl Controller {
                             .ui_tx
                             .send(UiMessage::StartMainLayer)
                             .unwrap();
+                    },
+                    ControllerMessage::ElectrumActivate(coin) => {
+                        let electrum = self.client.electrum(&coin, true).unwrap();
+
+                        if let Some(error) = electrum.error {
+                            // tell the UI to show the error
+                        } else {
+                            self.ui
+                                .ui_tx
+                                .send(UiMessage::ElectrumStarted((electrum.coin.unwrap(), electrum.address.unwrap(), electrum.balance.unwrap())))
+                                .unwrap();
+                        }
                     }
                 }
             }
