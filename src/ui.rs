@@ -82,8 +82,9 @@ impl Ui {
                     output.set_content(balance);
                 },
                 UiMessage::StartMainLayer => {
+                    let main_view = crate::main_v::create();
                     self.cursive.pop_layer();
-                    self.cursive.add_layer(Dialog::around(TextView::new("Started")))
+                    self.cursive.add_layer(main_view);
                 }
             }
         }

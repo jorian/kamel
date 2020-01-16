@@ -35,9 +35,6 @@ impl LoginView {
                             LinearLayout::horizontal()
                                 .child(BoxView::with_full_width(DummyView))
                                 .child(Button::new("Coins",  move |siv| {
-                                    // do coin fetching in closure, call cb_sink with data?
-                                    // https://stackoverflow.com/questions/33662098/cannot-move-out-of-captured-outer-variable-in-an-fn-closure
-
                                     let coinselection = coin_selection_v::CoinSelectionView::new();
                                     siv.add_layer(coinselection);
                                 }))
