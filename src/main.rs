@@ -17,6 +17,7 @@ mod menu_v;
 mod orderbook_v;
 
 use crate::controller::Controller;
+use std::process::Command;
 
 fn main() {
     // userpass -> random generator
@@ -28,4 +29,6 @@ fn main() {
         Ok(mut controller) => controller.run(),
         Err(e) => println!("Error: {}", e),
     }
+
+    Command::new("pkill -15 marketmaker");
 }

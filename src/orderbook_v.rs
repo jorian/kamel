@@ -1,10 +1,12 @@
 use cursive::align::HAlign;
 use std::cmp::Ordering;
-use cursive::views::{DummyView, LinearLayout, BoxView, Button, Dialog, SelectView, TextView};
+use cursive::views::{DummyView, LinearLayout, BoxView, Button, Dialog, SelectView, TextView, Panel};
 use cursive::Cursive;
 use std::sync::{mpsc};
-use cursive::traits::{View, Identifiable};
+use cursive::traits::{View, Identifiable, Boxable};
 use crate::controller::ControllerMessage;
+use serde_json::ser::CharEscape::LineFeed;
+use cursive_aligned_view::{Alignable, AlignedView};
 
 pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let overview = BoxView::with_full_screen(
@@ -71,7 +73,17 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
 
                         siv.add_layer(Dialog::around(sv))
                     }).with_id("rel-btn")))
-            .child(DummyView));
+            .child(DummyView)
+            .child(
+                AlignedView::with_bottom_center(
+                    BoxView::with_fixed_height(28, BoxView::with_full_width(
+                        LinearLayout::horizontal()
+                            .child(AlignedView::with_center_right(BoxView::with_full_screen(Panel::new(DummyView))))
+                            .child(AlignedView::with_center_left(BoxView::with_full_screen(Panel::new(DummyView))))
+                    ))
+                )
+            )
+    );
 //            .child(
 //                LinearLayout::horizontal()
 //                    .child(
