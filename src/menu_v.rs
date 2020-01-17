@@ -10,8 +10,8 @@ pub fn create() -> Box<dyn View> {
         .h_align(HAlign::Left)
         .with_id("main_menu");
 
+    main_menu.get_mut().add_item("Orderbook", "orderbook");
     main_menu.get_mut().add_item("Coins", "active_coins");
-//    main_menu.get_mut().add_item("Orderbook", "orderbook");
 
     let change_view = |s: &mut Cursive, v: &&str| {
         if *v == "" {

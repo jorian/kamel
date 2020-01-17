@@ -49,5 +49,5 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
             )
     );
 
-    Box::new(overview.with_id("coins_view"))
+    Box::new(overview.with_id("active_coins"))
 }

@@ -14,6 +14,7 @@ mod coin_management;
 mod login_v;
 mod main_v;
 mod menu_v;
+mod orderbook_v;
 
 use crate::controller::Controller;
 

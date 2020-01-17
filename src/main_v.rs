@@ -7,9 +7,11 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let menu = crate::menu_v::create();
 
     let active_coins = crate::active_coins_v::create(controller_tx.clone());
+    let orderbook = crate::orderbook_v::create(controller_tx.clone());
 
     let stack = StackView::new()
         .layer(active_coins)
+        .layer(orderbook)
         .with_id("root_stack")
         .full_height();
 
