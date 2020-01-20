@@ -1,7 +1,7 @@
 use cursive::align::{HAlign};
 use std::cmp::Ordering;
 use cursive::views::{DummyView, LinearLayout, BoxView, Button, Dialog, SelectView, TextView, Panel};
-use cursive::Cursive;
+use cursive::{Cursive, With};
 use std::sync::{mpsc};
 use cursive::traits::{View, Identifiable, Boxable};
 use crate::controller::ControllerMessage;
@@ -22,22 +22,24 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                     .child(BoxView::with_full_width(DummyView))
                                     .child(BoxView::with_fixed_height(1,
                                         Button::new("Select coin", move |s| {
-                                            let mut selected_coins = load_coins_file();
+                                            controller_tx_clone.send(ControllerMessage::FetchEnabledCoins);
 
-                                            let mut sv = SelectView::<String>::new();
-                                            sv.add_all_str(selected_coins);
-                                            let controller_tx_clone2 = controller_tx_clone.clone();
-                                            sv.set_on_submit(move |siv, label: &str| {
-                                                controller_tx_clone2.send(ControllerMessage::SelectAsk(label.into()))
-                                            });
-
-                                            s.add_layer(Dialog::around(sv).title("Select"));
-                                        })
+//                                            let mut selected_coins = load_coins_file();
+//
+//                                            let mut sv = SelectView::<String>::new();
+//                                            sv.add_all_str(selected_coins);
+//                                            let controller_tx_clone2 = controller_tx_clone.clone();
+//                                            sv.set_on_submit(move |siv, label: &str| {
+//                                                controller_tx_clone2.send(ControllerMessage::SelectAsk(label.into()))
+//                                            });
+//
+//                                            s.add_layer(Dialog::around(sv).title("Select"));
+                                        }).with_id("orderbook_ask_select_btn")
                                     ))
                                     .child(BoxView::with_full_width(DummyView))
                             ).child(LinearLayout::horizontal().child(
-                                TextView::new("TEST")
-                                    .h_align(HAlign::Center)
+                                TextView::new("")
+                                    .with_id("orderbook_ask_address")
                                 )
                             )
                         )

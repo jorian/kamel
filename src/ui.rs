@@ -2,7 +2,7 @@ use cursive::Cursive;
 use std::sync::mpsc;
 use crate::controller::ControllerMessage;
 use cursive::event::Key;
-use cursive::views::{TextArea, Dialog, TextView};
+use cursive::views::{TextArea, Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
 
 pub struct Ui {
@@ -16,7 +16,9 @@ pub enum UiMessage {
     UpdateOutput(String),
     Balance(String),
     StartMainLayer,
-    ElectrumStarted((String, String, String))
+    ElectrumStarted((String, String, String)),
+    OrderbookSelectCoin(Vec<String>),
+    OrderbookUpdateAskCoinSelect(String, String, String)
 }
 
 impl Ui {
@@ -46,15 +48,15 @@ impl Ui {
         ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
 
         // Configure a callback
-        ui.cursive.add_global_callback(Key::Esc, move |c| {
-            // When the user presses Escape, send an
-            // UpdatedInputAvailable message to the controller.
-            let input = c.find_id::<TextArea>("input").unwrap();
-            let text = input.get_content().to_owned();
-            controller_tx_clone.send(
-                ControllerMessage::FetchBalance(text))
-                .unwrap();
-        });
+//        ui.cursive.add_global_callback(Key::Esc, move |c| {
+//            // When the user presses Escape, send an
+//            // UpdatedInputAvailable message to the controller.
+//            let input = c.find_id::<TextArea>("input").unwrap();
+//            let text = input.get_content().to_owned();
+//            controller_tx_clone.send(
+//                ControllerMessage::FetchBalance(text))
+//                .unwrap();
+//        });
         ui.cursive.set_autorefresh(true);
 
         ui
@@ -102,7 +104,31 @@ impl Ui {
                     self.cursive.call_on_id(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
                         textview.set_content(&address)
                     });
+                },
+                UiMessage::OrderbookSelectCoin(coins) => {
+                    let mut sv = SelectView::<String>::new();
+                    sv.add_all_str(coins);
+                    let controller_tx_clone = self.controller_tx.clone();
+                    sv.set_on_submit(move |siv, label: &str| {
+                        controller_tx_clone.send(ControllerMessage::SelectAsk(label.into()))
+                    });
+
+                    self.cursive.add_layer(Dialog::around(sv)
+                        .title("Select")
+                        .button("Cancel", |siv| { siv.pop_layer(); }));
+                },
+                UiMessage::OrderbookUpdateAskCoinSelect(balance, address, coin) => {
+                    self.cursive.call_on_id("orderbook_ask_address", |tv: &mut TextView| {
+                        tv.set_content(format!("\n{}: {}", &address, &balance));
+                    });
+
+                    self.cursive.call_on_id("orderbook_ask_select_btn", |btn: &mut Button| {
+                        btn.set_label(&coin);
+                    });
+
+                    self.cursive.pop_layer();
                 }
+
             }
         }
 

@@ -10,8 +10,8 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let orderbook = crate::orderbook_v::create(controller_tx.clone());
 
     let stack = StackView::new()
-        .layer(active_coins)
         .layer(orderbook)
+        .layer(active_coins)
         .with_id("root_stack")
         .full_height();
 

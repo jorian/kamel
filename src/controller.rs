@@ -19,7 +19,8 @@ pub enum ControllerMessage {
     StartMainLayer(String),
     ElectrumActivate(String),
     StopMarketmaker,
-    SelectAsk(String)
+    SelectAsk(String),
+    FetchEnabledCoins
 }
 
 impl Controller {
@@ -64,14 +65,14 @@ impl Controller {
 
                         mm2_json.create_mm2_json();
 
-//                        thread::spawn( move || {
-//                            let _mm2client =
-//                                Command::new("./marketmaker")
-//                                    .spawn()
-//                                    .expect("Failed to start");
-//                        });
-//
-//                        thread::sleep(Duration::from_secs(1));
+                        thread::spawn( move || {
+                            let _mm2client =
+                                Command::new("./marketmaker")
+                                    .spawn()
+                                    .expect("Failed to start");
+                        });
+
+                        thread::sleep(Duration::from_secs(1));
                         std::fs::remove_file("MM2.json");
 
                         self.ui
@@ -85,7 +86,7 @@ impl Controller {
                         if let Some(error) = electrum.error {
                             // tell the UI to show the error
                         } else {
-                            self.electrum_enabled.push(coin.into_string());
+                            self.electrum_enabled.push(coin.clone());
                             self.ui
                                 .ui_tx
                                 .send(UiMessage::ElectrumStarted((electrum.coin.unwrap(), electrum.address.unwrap(), electrum.balance.unwrap())))
@@ -106,13 +107,17 @@ impl Controller {
                             } else {
                                 let address = balance.address.unwrap();
                                 let balance = balance.balance.unwrap();
+
+                                self.ui.ui_tx.send(UiMessage::OrderbookUpdateAskCoinSelect(balance, address, coin));
                             }
 
                                 // enable electrum?
                                 // show error message?
-                                // don't even show the coin in the selection list to begin with?
-                            }
+                                // don't even show the coin in the selection list to begin with
                         }
+                    },
+                    ControllerMessage::FetchEnabledCoins => {
+                        self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(self.electrum_enabled.clone()));
                     }
                 }
             }
