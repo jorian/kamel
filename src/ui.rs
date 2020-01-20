@@ -13,12 +13,11 @@ pub struct Ui {
 }
 
 pub enum UiMessage {
-    UpdateOutput(String),
     Balance(String),
     StartMainLayer,
     ElectrumStarted((String, String, String)),
-    OrderbookSelectCoin(Vec<String>),
-    OrderbookUpdateAskCoinSelect(String, String, String)
+    OrderbookSelectCoin(String, Vec<String>),
+    OrderbookUpdateCoinSelect(String, String, String, String)
 }
 
 impl Ui {
@@ -75,13 +74,6 @@ impl Ui {
         while let Some(message) = self.ui_rx.try_iter().next() {
             // check which message
             match message {
-                UiMessage::UpdateOutput(text) => {
-                    // do what is needed upon that message
-                    let mut output = self.cursive
-                        .find_id::<TextView>("output")
-                        .unwrap();
-                    output.set_content(text);
-                },
                 UiMessage::Balance(balance) => {
                     let mut output = self.cursive
                         .find_id::<TextView>("output")
@@ -99,31 +91,56 @@ impl Ui {
                         textview.set_content(&balance)
                     });
 
-                    dbg!(&address);
-
                     self.cursive.call_on_id(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
                         textview.set_content(&address)
                     });
                 },
-                UiMessage::OrderbookSelectCoin(coins) => {
+                UiMessage::OrderbookSelectCoin(side, coins) => {
+                    let mut coins = coins.to_owned();
+                    let mut label = String::new();
+
+                    match side.as_str() {
+                        "ask" => {
+                            coins.retain(|coin| {
+                                self.cursive.call_on_id("orderbook_bid_select_btn", |btn: &mut Button| {
+                                    label = String::from(btn.label());
+                                });
+
+                                coin.ne(&label)
+                            });
+                        },
+                        "bid" => {
+                            coins.retain(|coin| {
+                                self.cursive.call_on_id("orderbook_ask_select_btn", |btn: &mut Button| {
+                                    label = String::from(btn.label());
+                                });
+
+                                coin.ne(&label)
+                            });
+                        },
+                        _ => unreachable!()
+
+                    }
+
                     let mut sv = SelectView::<String>::new();
+
                     sv.add_all_str(coins);
                     let controller_tx_clone = self.controller_tx.clone();
                     sv.set_on_submit(move |siv, label: &str| {
-                        controller_tx_clone.send(ControllerMessage::SelectAsk(label.into()))
+                        controller_tx_clone.send(ControllerMessage::SelectSide(side.clone(), label.into()))
                     });
 
                     self.cursive.add_layer(Dialog::around(sv)
                         .title("Select")
                         .button("Cancel", |siv| { siv.pop_layer(); }));
                 },
-                UiMessage::OrderbookUpdateAskCoinSelect(balance, address, coin) => {
-                    self.cursive.call_on_id("orderbook_ask_address", |tv: &mut TextView| {
+                UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin) => {
+                    self.cursive.call_on_id(&format!("orderbook_{}_address", &side), |tv: &mut TextView| {
                         tv.set_content(format!("\n{}: {}", &address, &balance));
                     });
 
-                    self.cursive.call_on_id("orderbook_ask_select_btn", |btn: &mut Button| {
-                        btn.set_label(&coin);
+                    self.cursive.call_on_id(&format!("orderbook_{}_select_btn", &side),|btn: &mut Button| {
+                        btn.set_label_raw(&coin);
                     });
 
                     self.cursive.pop_layer();

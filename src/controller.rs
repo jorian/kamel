@@ -14,13 +14,12 @@ pub struct Controller {
 }
 
 pub enum ControllerMessage {
-    UpdatedInputAvailable(String),
     FetchBalance(String),
     StartMainLayer(String),
     ElectrumActivate(String),
     StopMarketmaker,
-    SelectAsk(String),
-    FetchEnabledCoins
+    SelectSide(String, String),
+    FetchEnabledCoins(String)
 }
 
 impl Controller {
@@ -42,12 +41,6 @@ impl Controller {
             // on each step, clear the message queue that the controller receives
             while let Some(message) = self.rx.try_iter().next() {
                 match message {
-                    ControllerMessage::UpdatedInputAvailable(text) => {
-                        self.ui
-                            .ui_tx
-                            .send(UiMessage::UpdateOutput(text))
-                            .unwrap();
-                    },
                     ControllerMessage::FetchBalance(coin) => {
                         let balance = self.client.balance(&coin).unwrap();
                         self.ui
@@ -96,7 +89,7 @@ impl Controller {
                     ControllerMessage::StopMarketmaker => {
                         self.client.stop();
                     },
-                    ControllerMessage::SelectAsk(coin) => {
+                    ControllerMessage::SelectSide(side, coin) => {
                         let balance = self.client.balance(&coin).unwrap();
                         if let Some(error) = balance.error {
                             // the error could be that the coin was not enabled.
@@ -108,16 +101,12 @@ impl Controller {
                                 let address = balance.address.unwrap();
                                 let balance = balance.balance.unwrap();
 
-                                self.ui.ui_tx.send(UiMessage::OrderbookUpdateAskCoinSelect(balance, address, coin));
+                                self.ui.ui_tx.send(UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin));
                             }
-
-                                // enable electrum?
-                                // show error message?
-                                // don't even show the coin in the selection list to begin with
                         }
                     },
-                    ControllerMessage::FetchEnabledCoins => {
-                        self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(self.electrum_enabled.clone()));
+                    ControllerMessage::FetchEnabledCoins(side) => {
+                        self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(side.into(), self.electrum_enabled.clone()));
                     }
                 }
             }

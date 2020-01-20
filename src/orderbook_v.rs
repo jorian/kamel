@@ -11,6 +11,8 @@ use crate::coin_management::load_coins_file;
 
 pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let controller_tx_clone = controller_tx.clone();
+    let controller_tx_clone2 = controller_tx.clone();
+
     let overview = BoxView::with_full_screen(
         LinearLayout::horizontal()
             .child(
@@ -20,22 +22,9 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                             LinearLayout::vertical().child(
                                 LinearLayout::horizontal()
                                     .child(BoxView::with_full_width(DummyView))
-                                    .child(BoxView::with_fixed_height(1,
-                                        Button::new("Select coin", move |s| {
-                                            controller_tx_clone.send(ControllerMessage::FetchEnabledCoins);
-
-//                                            let mut selected_coins = load_coins_file();
-//
-//                                            let mut sv = SelectView::<String>::new();
-//                                            sv.add_all_str(selected_coins);
-//                                            let controller_tx_clone2 = controller_tx_clone.clone();
-//                                            sv.set_on_submit(move |siv, label: &str| {
-//                                                controller_tx_clone2.send(ControllerMessage::SelectAsk(label.into()))
-//                                            });
-//
-//                                            s.add_layer(Dialog::around(sv).title("Select"));
-                                        }).with_id("orderbook_ask_select_btn")
-                                    ))
+                                    .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                                        controller_tx_clone.send(ControllerMessage::FetchEnabledCoins("ask".into()));
+                                    }).with_id("orderbook_ask_select_btn")))
                                     .child(BoxView::with_full_width(DummyView))
                             ).child(LinearLayout::horizontal().child(
                                 TextView::new("")
@@ -49,7 +38,24 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
             .child(LinearLayout::vertical()
                 .child(AlignedView::with_bottom_center(BoxView::with_full_screen(Panel::new(DummyView))))
                 .child(AlignedView::with_top_center(BoxView::with_full_screen(Panel::new(DummyView)))))
-            .child(AlignedView::with_center_right(BoxView::with_full_screen(Panel::new(DummyView))))
+            .child(AlignedView::with_center_right(
+                BoxView::with_full_screen(
+                    Panel::new(
+                        LinearLayout::vertical().child(
+                            LinearLayout::horizontal()
+                                .child(BoxView::with_full_width(DummyView))
+                                .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                                    controller_tx_clone2.send(ControllerMessage::FetchEnabledCoins("bid".into()));
+                                }).with_id("orderbook_bid_select_btn")))
+                                .child(BoxView::with_full_width(DummyView))
+                        ).child(LinearLayout::horizontal().child(
+                            TextView::new("")
+                                .with_id("orderbook_bid_address")
+                        )
+                        )
+                    )
+                )
+            ))
     );
 //        LinearLayout::vertical()
 //            .child(
