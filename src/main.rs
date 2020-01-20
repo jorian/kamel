@@ -29,6 +29,4 @@ fn main() {
         Ok(mut controller) => controller.run(),
         Err(e) => println!("Error: {}", e),
     }
-
-    Command::new("pkill -15 marketmaker");
 }

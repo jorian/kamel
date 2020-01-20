@@ -23,22 +23,26 @@ impl Ui {
     pub fn new(controller_tx: mpsc::Sender<ControllerMessage>) -> Self {
         let (ui_tx, ui_rx) = mpsc::channel::<UiMessage>();
 
+        let mut cursive: Cursive = Cursive::default();
+        let controller_tx_clone = controller_tx.clone();
+
+        cursive.add_global_callback('q', move |s| {
+            controller_tx_clone.send(ControllerMessage::StopMarketmaker);
+            s.quit();
+        });
+
         let mut ui = Ui {
-            cursive: Cursive::default(),
+            cursive,
             ui_tx,
             ui_rx,
             controller_tx
         };
 
-        // Create a view tree with a TextArea for input, and a
-        // TextView for output.
-
-
         // Create all views here, send a controller_tx along with it.
         // whenever a view needs updating, send a message to controller, which sends back
         // the requested information
-
         let controller_tx_clone = ui.controller_tx.clone();
+
         ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
 
         // Configure a callback

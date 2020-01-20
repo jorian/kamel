@@ -16,7 +16,8 @@ pub enum ControllerMessage {
     UpdatedInputAvailable(String),
     FetchBalance(String),
     StartMainLayer(String),
-    ElectrumActivate(String)
+    ElectrumActivate(String),
+    StopMarketmaker
 }
 
 impl Controller {
@@ -60,14 +61,14 @@ impl Controller {
 
                         mm2_json.create_mm2_json();
 
-//                        thread::spawn( move || {
-//                            let _mm2client =
-//                                Command::new("./marketmaker")
-//                                    .spawn()
-//                                    .expect("Failed to start");
-//                        });
+                        thread::spawn( move || {
+                            let _mm2client =
+                                Command::new("./marketmaker")
+                                    .spawn()
+                                    .expect("Failed to start");
+                        });
 
-//                        thread::sleep(Duration::from_secs(1));
+                        thread::sleep(Duration::from_secs(1));
                         std::fs::remove_file("MM2.json");
 
                         self.ui
@@ -86,6 +87,9 @@ impl Controller {
                                 .send(UiMessage::ElectrumStarted((electrum.coin.unwrap(), electrum.address.unwrap(), electrum.balance.unwrap())))
                                 .unwrap();
                         }
+                    },
+                    ControllerMessage::StopMarketmaker => {
+                        self.client.stop();
                     }
                 }
             }
