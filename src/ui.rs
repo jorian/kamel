@@ -76,11 +76,11 @@ impl Ui {
                 },
                 UiMessage::ElectrumStarted((coin, address, balance)) => {
                     // TODO add address in menu
-                    self.cursive.call_on_id(&format!("electrum_balance_{}", &coin), |textview: &mut TextView| {
+                    self.cursive.call_on_name(&format!("electrum_balance_{}", &coin), |textview: &mut TextView| {
                         textview.set_content(&balance)
                     });
 
-                    self.cursive.call_on_id(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
+                    self.cursive.call_on_name(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
                         textview.set_content(&address)
                     });
                 },
@@ -91,7 +91,7 @@ impl Ui {
                     match side.as_str() {
                         "ask" => {
                             coins.retain(|coin| {
-                                self.cursive.call_on_id("orderbook_bid_select_btn", |btn: &mut Button| {
+                                self.cursive.call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
                                     label = String::from(btn.label());
                                 });
 
@@ -100,7 +100,7 @@ impl Ui {
                         },
                         "bid" => {
                             coins.retain(|coin| {
-                                self.cursive.call_on_id("orderbook_ask_select_btn", |btn: &mut Button| {
+                                self.cursive.call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
                                     label = String::from(btn.label());
                                 });
 
@@ -124,11 +124,11 @@ impl Ui {
                         .button("Cancel", |siv| { siv.pop_layer(); }));
                 },
                 UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin) => {
-                    self.cursive.call_on_id(&format!("orderbook_{}_address", &side), |tv: &mut TextView| {
+                    self.cursive.call_on_name(&format!("orderbook_{}_address", &side), |tv: &mut TextView| {
                         tv.set_content(format!("\n{}: {}", &address, &balance));
                     });
 
-                    self.cursive.call_on_id(&format!("orderbook_{}_select_btn", &side),|btn: &mut Button| {
+                    self.cursive.call_on_name(&format!("orderbook_{}_select_btn", &side),|btn: &mut Button| {
                         btn.set_label_raw(&coin);
                     });
 

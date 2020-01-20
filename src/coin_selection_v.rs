@@ -1,4 +1,4 @@
-use cursive::views::{BoxView, DummyView, Button, Panel, LinearLayout, SelectView, Dialog};
+use cursive::views::{ResizedView, DummyView, Button, Panel, LinearLayout, SelectView, Dialog};
 use serde_json::Value;
 use std::fs;
 use std::fs::File;
@@ -13,32 +13,32 @@ use crate::coin_management::*;
 
 
 pub struct CoinSelectionView {
-    view: BoxView<Panel<LinearLayout>>,
+    view: ResizedView<Panel<LinearLayout>>,
 }
 
 impl ViewWrapper for CoinSelectionView {
-    cursive::wrap_impl!(self.view: BoxView<Panel<LinearLayout>>);
+    cursive::wrap_impl!(self.view: ResizedView<Panel<LinearLayout>>);
 }
 
 impl CoinSelectionView {
     pub fn new() -> Self {
         fn add_coin(siv: &mut Cursive, s: &String) {
-            siv.call_on_id("selected_coins", |view: &mut SelectView<String>| {
+            siv.call_on_name("selected_coins", |view: &mut SelectView<String>| {
                 view.add_item_str(String::from(s))
             });
 
-            siv.call_on_id("available_coins", |view: &mut SelectView<String>| {
+            siv.call_on_name("available_coins", |view: &mut SelectView<String>| {
                 view.remove_item(view.selected_id().unwrap())
             });
         }
 
         fn remove_coin(siv: &mut Cursive, s: &String) {
-            siv.call_on_id("available_coins", |view: &mut SelectView<String>| {
+            siv.call_on_name("available_coins", |view: &mut SelectView<String>| {
                 view.add_item_str(String::from(s));
                 view.sort();
             });
 
-            siv.call_on_id("selected_coins", |view: &mut SelectView<String>| {
+            siv.call_on_name("selected_coins", |view: &mut SelectView<String>| {
                 view.remove_item(view.selected_id().unwrap())
             });
         }
@@ -46,7 +46,7 @@ impl CoinSelectionView {
         fn close_coin_selection(mut siv: &mut Cursive) {
             let mut selection: Vec<String> = vec![];
 
-            siv.call_on_id("selected_coins", |view: &mut SelectView<String>| {
+            siv.call_on_name("selected_coins", |view: &mut SelectView<String>| {
                 selection = view.iter()
                     .map(|select| select.1.clone() )
                     .collect::<Vec<_>>();
@@ -84,28 +84,28 @@ impl CoinSelectionView {
         selected_coins.sort();
 
         CoinSelectionView {
-            view: BoxView::with_full_screen(
+            view: ResizedView::with_full_screen(
                 Panel::new(LinearLayout::horizontal()
-                    .child(BoxView::with_min_width(20, DummyView).squishable())
+                    .child(ResizedView::with_min_width(20, DummyView))
                     .child(
                         LinearLayout::vertical()
                             .child(
-                                BoxView::with_full_height(
+                                ResizedView::with_full_height(
                                     LinearLayout::horizontal()
                                         .child(
-                                            BoxView::with_min_width(18, Panel::new(
+                                            ResizedView::with_min_width(18, Panel::new(
                                                 available_coins
                                                     .on_submit(add_coin)
-                                                    .with_id("available_coins")
+                                                    .with_name("available_coins")
                                                     .scrollable()
                                             ).title("Available"))
                                         )
-                                        .child(BoxView::with_min_width(6, DummyView).squishable())
+                                        .child(ResizedView::with_min_width(6, DummyView))
                                         .child(
-                                            BoxView::with_min_width(18, Panel::new(
+                                            ResizedView::with_min_width(18, Panel::new(
                                                 selected_coins
                                                     .on_submit(remove_coin)
-                                                    .with_id("selected_coins")
+                                                    .with_name("selected_coins")
                                                     .scrollable()
                                             ).title("Selected"))
                                         )
@@ -115,7 +115,7 @@ impl CoinSelectionView {
                                 Button::new("Apply", close_coin_selection)
                             )
                     )
-                    .child(BoxView::with_min_width(20, DummyView).squishable())
+                    .child(ResizedView::with_min_width(20, DummyView))
                 ).title("Select coins")
             ),
         }

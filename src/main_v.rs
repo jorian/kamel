@@ -12,7 +12,7 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let stack = StackView::new()
         .layer(orderbook)
         .layer(active_coins)
-        .with_id("root_stack")
+        .with_name("root_stack")
         .full_height();
 
     let main = LinearLayout::horizontal()

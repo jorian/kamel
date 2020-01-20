@@ -1,4 +1,5 @@
 extern crate cursive;
+extern crate cursive_table_view;
 extern crate reqwest;
 extern crate serde;
 extern crate dirs;

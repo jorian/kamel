@@ -7,10 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cursive = "0.14"
+cursive-aligned-view = "0.2.0"
+cursive_table_view = "0.12.0"
 mmapi = { path = "../mmapi" }
-cursive = "0.13"
 reqwest = "0.9"
 serde_json = "1.0.40"
 serde = "1.0.40"
 dirs = "2.0.2"
-cursive-aligned-view = "^0"

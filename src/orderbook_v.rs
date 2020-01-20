@@ -1,6 +1,6 @@
 use cursive::align::{HAlign};
 use std::cmp::Ordering;
-use cursive::views::{DummyView, LinearLayout, BoxView, Button, Dialog, SelectView, TextView, Panel};
+use cursive::views::{DummyView, LinearLayout, ResizedView, Button, Dialog, SelectView, TextView, Panel};
 use cursive::{Cursive, With};
 use std::sync::{mpsc};
 use cursive::traits::{View, Identifiable, Boxable};
@@ -8,59 +8,61 @@ use crate::controller::ControllerMessage;
 use cursive_aligned_view::{Alignable, AlignedView};
 use cursive::theme::Effect;
 use crate::coin_management::load_coins_file;
+use cursive_table_view::{TableView, TableColumn, TableViewItem};
 
 pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
 //    let controller_tx_clone = controller_tx.clone();
 //    let controller_tx_clone2 = controller_tx.clone();
 
-    fn create_orderbook_side(side: String, controller_tx: mpsc::Sender<ControllerMessage>) -> AlignedView<BoxView<Panel<LinearLayout>>> {
+    fn create_orderbook_side(side: String, controller_tx: mpsc::Sender<ControllerMessage>) -> AlignedView<ResizedView<Panel<LinearLayout>>> {
         let controller_tx_clone = controller_tx.clone();
 
         let side_clone = side.clone();
 
         AlignedView::with_center_left(
-            BoxView::with_full_screen(
+            ResizedView::with_full_screen(
                 Panel::new(
-                    LinearLayout::vertical().child(
+                    LinearLayout::vertical()
+                        .child(
                         LinearLayout::horizontal()
-                            .child(BoxView::with_full_width(DummyView))
-                            .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                            .child(ResizedView::with_full_width(DummyView))
+                            .child(ResizedView::with_fixed_height(1, Button::new("Select coin", move |s| {
                                 controller_tx_clone.send(ControllerMessage::FetchEnabledCoins(side_clone.clone()));
-                            }).with_id(&format!("orderbook_{}_select_btn", &side))))
-                            .child(BoxView::with_full_width(DummyView))
-                    ).child(LinearLayout::horizontal().child(
+                            }).with_name(&format!("orderbook_{}_select_btn", &side))))
+                            .child(ResizedView::with_full_width(DummyView))
+                        )
+                        .child(LinearLayout::horizontal().child(
                         TextView::new("")
-                            .with_id(format!("orderbook_{}_address", &side))
-                    )
-                    )
-                )
+                            .with_name(format!("orderbook_{}_address", &side))
+                        ))
+                        .child(DummyView.fixed_height(5))
+                        .child(TableView::<mmapi::response::Ask, BasicColumn>::new()
+                            .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Center))
+                            .column(BasicColumn::Price, "Price", |c| {
+                        c.ordering(Ordering::Less).width_percent(25)
+                    })
+                    .default_column(BasicColumn::Price)
+                    .with_name(format!("{}-side", &side))
+                    .full_screen()))
+
             )
         )
     }
 
-    let overview = BoxView::with_full_screen(
+    let overview = ResizedView::with_full_screen(
         LinearLayout::horizontal()
             .child(
                 create_orderbook_side("ask".to_string(), controller_tx.clone())
             )
             .child(LinearLayout::vertical()
-                .child(AlignedView::with_bottom_center(BoxView::with_full_screen(Panel::new(DummyView))))
-                .child(AlignedView::with_top_center(BoxView::with_full_screen(Panel::new(DummyView)))))
+                .child(AlignedView::with_bottom_center(ResizedView::with_full_screen(Panel::new(DummyView))))
+//                .child(AlignedView::with_top_center(ResizedView::with_full_screen(Panel::new(DummyView)))))
+            )
             .child(
                 create_orderbook_side("bid".to_string(), controller_tx.clone())
             )
     );
 
-//            .child(
-//                AlignedView::with_bottom_center(
-//                    BoxView::with_fixed_height(28, BoxView::with_full_width(
-//                        LinearLayout::horizontal()
-//                            .child(AlignedView::with_center_right(BoxView::with_full_screen(Panel::new(DummyView))))
-//                            .child(AlignedView::with_center_left(BoxView::with_full_screen(Panel::new(DummyView))))
-//                    ))
-//                )
-//            )
-//    );
 //            .child(
 //                LinearLayout::horizontal()
 //                    .child(
@@ -99,8 +101,8 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
 ////                            }
 //                            });
 //
-//                        }).with_id("fetch_orderbook_btn"))
-//                    .child(BoxView::with_full_width(DummyView)))
+//                        }).with_name("fetch_orderbook_btn"))
+//                    .child(ResizedView::with_full_width(DummyView)))
 //            .child(DummyView)
 //            .child(LinearLayout::horizontal()
 //                .child(TableView::<Ask, BasicColumn>::new()
@@ -109,7 +111,7 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
 //                        c.ordering(Ordering::Less).width_percent(25)
 //                    })
 //                    .default_column(BasicColumn::Price)
-//                    .with_id("ask-side")
+//                    .with_name("ask-side")
 //                    .full_screen())
 //                .child(DummyView)
 //                .child(TableView::<Bid, BasicColumn>::new()
@@ -117,9 +119,32 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
 //                        c.ordering(Ordering::Greater).width_percent(25)
 //                    })
 //                    .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Center))
-//                    .with_id("bid-side")
+//                    .with_name("bid-side")
 //                    .full_screen())
 //            ));
 
-    Box::new(overview.with_id("orderbook"))
+    Box::new(overview.with_name("orderbook"))
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum BasicColumn {
+    Price,
+    Maxvolume
+}
+
+impl TableViewItem<BasicColumn> for mmapi::response::Ask {
+    fn to_column(&self, column: BasicColumn) -> String {
+        match column {
+            BasicColumn::Price => self.price.to_string(),
+            BasicColumn::Maxvolume => self.maxvolume.to_string()
+        }
+    }
+
+    fn cmp(&self, other: &Self, column: BasicColumn) -> Ordering where
+        Self: Sized {
+        match column {
+            BasicColumn::Price => self.price.partial_cmp(&other.price).unwrap(),
+            BasicColumn::Maxvolume => self.maxvolume.partial_cmp(&other.maxvolume).unwrap()
+        }
+    }
 }

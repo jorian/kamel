@@ -1,4 +1,4 @@
-use cursive::views::{BoxView, Panel, LinearLayout, DummyView, TextView, EditView, Button};
+use cursive::views::{ResizedView, Panel, LinearLayout, DummyView, TextView, EditView, Button};
 use cursive::view::{ViewWrapper, SizeConstraint};
 use std::sync::mpsc;
 use crate::controller::ControllerMessage;
@@ -7,18 +7,18 @@ use cursive::traits::{Identifiable, Boxable};
 use crate::coin_selection_v;
 
 pub struct LoginView {
-    view: BoxView<Panel<LinearLayout>>,
+    view: ResizedView<Panel<LinearLayout>>,
 }
 
 impl ViewWrapper for LoginView {
-    cursive::wrap_impl!(self.view: BoxView<Panel<LinearLayout>>);
+    cursive::wrap_impl!(self.view: ResizedView<Panel<LinearLayout>>);
 }
 
 impl LoginView {
     pub fn new(controller_tx: mpsc::Sender<ControllerMessage>) -> Self {
-        let mut loginview = BoxView::with_full_width(Panel::new(
+        let mut loginview = ResizedView::with_full_width(Panel::new(
             LinearLayout::horizontal()
-                .child(BoxView::with_fixed_width(10, DummyView).squishable())
+                .child(ResizedView::with_fixed_width(10, DummyView))
                 .child(
                     LinearLayout::vertical()
                         .child(
@@ -27,13 +27,13 @@ impl LoginView {
                         .child(DummyView)
                         .child(EditView::new()
                             .secret()
-                            .with_id("passphrase")
+                            .with_name("passphrase")
                             .full_width()
                         )
                         .child(DummyView)
-                        .child(BoxView::with_min_height(10, {
+                        .child(ResizedView::with_min_height(10, {
                             LinearLayout::horizontal()
-                                .child(BoxView::with_full_width(DummyView))
+                                .child(ResizedView::with_full_width(DummyView))
                                 .child(Button::new("Coins",  move |siv| {
                                     let coinselection = coin_selection_v::CoinSelectionView::new();
                                     siv.add_layer(coinselection);
@@ -45,9 +45,9 @@ impl LoginView {
                                     controller_tx.send(ControllerMessage::StartMainLayer(pp));
                                 }))
                         }
-                        ).squishable())
+                        ))
                 )
-                .child(BoxView::with_fixed_width(10, DummyView).squishable())
+                .child(ResizedView::with_fixed_width(10, DummyView))
         ).title("Login")
         );
 

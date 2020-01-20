@@ -8,7 +8,7 @@ use super::cursive::view::Identifiable;
 pub fn create() -> Box<dyn View> {
     let mut main_menu = SelectView::new()
         .h_align(HAlign::Left)
-        .with_id("main_menu");
+        .with_name("main_menu");
 
     main_menu.get_mut().add_item("Coins", "active_coins");
     main_menu.get_mut().add_item("Orderbook", "orderbook");
@@ -18,8 +18,8 @@ pub fn create() -> Box<dyn View> {
             return;
         }
 
-        let _ = s.call_on_id("root_stack", |sv: &mut StackView| {
-            let pos = sv.find_layer_from_id(v).unwrap();
+        let _ = s.call_on_name("root_stack", |sv: &mut StackView| {
+            let pos = sv.find_layer_from_name(v).unwrap();
             sv.move_to_front(pos);
         });
     };
