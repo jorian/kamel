@@ -46,16 +46,6 @@ impl Ui {
 
         ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
 
-        // Configure a callback
-//        ui.cursive.add_global_callback(Key::Esc, move |c| {
-//            // When the user presses Escape, send an
-//            // UpdatedInputAvailable message to the controller.
-//            let input = c.find_id::<TextArea>("input").unwrap();
-//            let text = input.get_content().to_owned();
-//            controller_tx_clone.send(
-//                ControllerMessage::FetchBalance(text))
-//                .unwrap();
-//        });
         ui.cursive.set_autorefresh(true);
 
         ui
@@ -69,7 +59,6 @@ impl Ui {
         }
 
         // Process any pending UI messages
-
         // if ui_rx has received any message,
         while let Some(message) = self.ui_rx.try_iter().next() {
             // check which message

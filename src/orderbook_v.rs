@@ -10,117 +10,47 @@ use cursive::theme::Effect;
 use crate::coin_management::load_coins_file;
 
 pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
-    let controller_tx_clone = controller_tx.clone();
-    let controller_tx_clone2 = controller_tx.clone();
+//    let controller_tx_clone = controller_tx.clone();
+//    let controller_tx_clone2 = controller_tx.clone();
+
+    fn create_orderbook_side(side: String, controller_tx: mpsc::Sender<ControllerMessage>) -> AlignedView<BoxView<Panel<LinearLayout>>> {
+        let controller_tx_clone = controller_tx.clone();
+
+        let side_clone = side.clone();
+
+        AlignedView::with_center_left(
+            BoxView::with_full_screen(
+                Panel::new(
+                    LinearLayout::vertical().child(
+                        LinearLayout::horizontal()
+                            .child(BoxView::with_full_width(DummyView))
+                            .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                                controller_tx_clone.send(ControllerMessage::FetchEnabledCoins(side_clone.clone()));
+                            }).with_id(&format!("orderbook_{}_select_btn", &side))))
+                            .child(BoxView::with_full_width(DummyView))
+                    ).child(LinearLayout::horizontal().child(
+                        TextView::new("")
+                            .with_id(format!("orderbook_{}_address", &side))
+                    )
+                    )
+                )
+            )
+        )
+    }
 
     let overview = BoxView::with_full_screen(
         LinearLayout::horizontal()
             .child(
-                AlignedView::with_center_left(
-                    BoxView::with_full_screen(
-                        Panel::new(
-                            LinearLayout::vertical().child(
-                                LinearLayout::horizontal()
-                                    .child(BoxView::with_full_width(DummyView))
-                                    .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
-                                        controller_tx_clone.send(ControllerMessage::FetchEnabledCoins("ask".into()));
-                                    }).with_id("orderbook_ask_select_btn")))
-                                    .child(BoxView::with_full_width(DummyView))
-                            ).child(LinearLayout::horizontal().child(
-                                TextView::new("")
-                                    .with_id("orderbook_ask_address")
-                                )
-                            )
-                        )
-                    )
-                )
+                create_orderbook_side("ask".to_string(), controller_tx.clone())
             )
             .child(LinearLayout::vertical()
                 .child(AlignedView::with_bottom_center(BoxView::with_full_screen(Panel::new(DummyView))))
                 .child(AlignedView::with_top_center(BoxView::with_full_screen(Panel::new(DummyView)))))
-            .child(AlignedView::with_center_right(
-                BoxView::with_full_screen(
-                    Panel::new(
-                        LinearLayout::vertical().child(
-                            LinearLayout::horizontal()
-                                .child(BoxView::with_full_width(DummyView))
-                                .child(BoxView::with_fixed_height(1, Button::new("Select coin", move |s| {
-                                    controller_tx_clone2.send(ControllerMessage::FetchEnabledCoins("bid".into()));
-                                }).with_id("orderbook_bid_select_btn")))
-                                .child(BoxView::with_full_width(DummyView))
-                        ).child(LinearLayout::horizontal().child(
-                            TextView::new("")
-                                .with_id("orderbook_bid_address")
-                        )
-                        )
-                    )
-                )
-            ))
+            .child(
+                create_orderbook_side("bid".to_string(), controller_tx.clone())
+            )
     );
-//        LinearLayout::vertical()
-//            .child(
-//                LinearLayout::horizontal()
-//                    .child(
-//                        TextView::new("Select pair (base / rel):"))
-//                    .child(DummyView)
-//                    .child(Button::new("select", |siv| {
-//                        let mut _rel = String::new();
-//
-//                        fn set_button_label(siv: &mut Cursive, label: &String) {
-//                            println!("{}", label);
-//                            siv.call_on_id("base-btn", |btn: &mut Button| { btn.set_label_raw(label) });
-//
-//                            siv.pop_layer();
-//                        }
-//
-//                        let mut selected_coins = crate::coin_management::load_coins_file();
-//
-//                        selected_coins.retain(|coin| {
-//                            siv.call_on_id("rel-btn", |btn: &mut Button| {
-//                                _rel = String::from(btn.label());
-//                            });
-//
-//                            coin.ne(&_rel)
-//                        });
-//
-//                        let mut sv = SelectView::<String>::new();
-//                        sv.add_all_str(selected_coins);
-//
-//                        sv.set_on_submit(set_button_label);
-//
-//                        siv.add_layer(Dialog::around(sv))
-//                    }).with_id("base-btn"))
-//                    .child(DummyView)
-//                    .child(TextView::new("/"))
-//                    .child(DummyView)
-//                    .child(Button::new("select", |siv| {
-//                        let mut _base = String::new();
-//
-//                        fn set_button_label(siv: &mut Cursive, label: &String) {
-//                            println!("{}", label);
-//                            siv.call_on_id("rel-btn", |btn: &mut Button| { btn.set_label_raw(label) });
-//
-//                            siv.pop_layer();
-//                        }
-//
-//                        let mut selected_coins = crate::coin_management::load_coins_file();
-//
-//                        selected_coins.retain(|coin| {
-//                            siv.call_on_id("base-btn", |btn: &mut Button| {
-//                                _base = String::from(btn.label());
-//                            });
-//
-//                            coin.ne(&_base)
-//                        });
-//
-//                        let mut sv = SelectView::<String>::new();
-//                        sv.add_all_str(selected_coins);
-//
-//                        sv.set_on_submit(set_button_label);
-//
-//                        siv.add_layer(Dialog::around(sv))
-//                    }).with_id("rel-btn")))
-//            .child(DummyView)
+
 //            .child(
 //                AlignedView::with_bottom_center(
 //                    BoxView::with_fixed_height(28, BoxView::with_full_width(
