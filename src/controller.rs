@@ -9,7 +9,8 @@ use serde::{Serialize, Deserialize};
 pub struct Controller {
     rx: mpsc::Receiver<ControllerMessage>,
     ui: Ui,
-    client: mmapi::Client
+    client: mmapi::Client,
+    electrum_enabled: Vec<String>,
 }
 
 pub enum ControllerMessage {
@@ -17,7 +18,8 @@ pub enum ControllerMessage {
     FetchBalance(String),
     StartMainLayer(String),
     ElectrumActivate(String),
-    StopMarketmaker
+    StopMarketmaker,
+    SelectAsk(String)
 }
 
 impl Controller {
@@ -30,6 +32,7 @@ impl Controller {
             // i would need to start marketmaker before starting the controller. which is not possible.
             // i can initialize a client without userpass, and set it later
             client: mmapi::Client::new("23y4g23g23jgjgjH3GJHGJKHg34"),
+            electrum_enabled: vec![]
         })
     }
 
@@ -61,14 +64,14 @@ impl Controller {
 
                         mm2_json.create_mm2_json();
 
-                        thread::spawn( move || {
-                            let _mm2client =
-                                Command::new("./marketmaker")
-                                    .spawn()
-                                    .expect("Failed to start");
-                        });
-
-                        thread::sleep(Duration::from_secs(1));
+//                        thread::spawn( move || {
+//                            let _mm2client =
+//                                Command::new("./marketmaker")
+//                                    .spawn()
+//                                    .expect("Failed to start");
+//                        });
+//
+//                        thread::sleep(Duration::from_secs(1));
                         std::fs::remove_file("MM2.json");
 
                         self.ui
@@ -82,6 +85,7 @@ impl Controller {
                         if let Some(error) = electrum.error {
                             // tell the UI to show the error
                         } else {
+                            self.electrum_enabled.push(coin.into_string());
                             self.ui
                                 .ui_tx
                                 .send(UiMessage::ElectrumStarted((electrum.coin.unwrap(), electrum.address.unwrap(), electrum.balance.unwrap())))
@@ -90,6 +94,25 @@ impl Controller {
                     },
                     ControllerMessage::StopMarketmaker => {
                         self.client.stop();
+                    },
+                    ControllerMessage::SelectAsk(coin) => {
+                        let balance = self.client.balance(&coin).unwrap();
+                        if let Some(error) = balance.error {
+                            // the error could be that the coin was not enabled.
+                            // tell the UI to show the error
+                        } else {
+                            if !self.electrum_enabled.contains(&coin) {
+                                let electrum = self.client.electrum(&coin, true).unwrap();
+                            } else {
+                                let address = balance.address.unwrap();
+                                let balance = balance.balance.unwrap();
+                            }
+
+                                // enable electrum?
+                                // show error message?
+                                // don't even show the coin in the selection list to begin with?
+                            }
+                        }
                     }
                 }
             }
