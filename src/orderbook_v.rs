@@ -37,14 +37,13 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                         ))
                         .child(DummyView.fixed_height(5))
                         .child(TableView::<mmapi::response::Ask, BasicColumn>::new()
-                            .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Center))
+                            .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Right))
                             .column(BasicColumn::Price, "Price", |c| {
-                        c.ordering(Ordering::Less).width_percent(25)
-                    })
+                                c.ordering(Ordering::Less).width_percent(40)
+                            })
                     .default_column(BasicColumn::Price)
                     .with_name(format!("{}-side", &side))
                     .full_screen()))
-
             )
         )
     }
@@ -135,8 +134,8 @@ pub enum BasicColumn {
 impl TableViewItem<BasicColumn> for mmapi::response::Ask {
     fn to_column(&self, column: BasicColumn) -> String {
         match column {
-            BasicColumn::Price => self.price.to_string(),
-            BasicColumn::Maxvolume => self.maxvolume.to_string()
+            BasicColumn::Price => format!("{:.8}", &self.price.parse::<f64>().unwrap()),
+            BasicColumn::Maxvolume => format!("{:.8}", &self.maxvolume.parse::<f64>().unwrap())
         }
     }
 

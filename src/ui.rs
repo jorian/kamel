@@ -4,9 +4,14 @@ use crate::controller::ControllerMessage;
 use cursive::event::Key;
 use cursive::views::{TextArea, Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
+use std::thread;
+use std::time::Duration;
+use mmapi::types::response::Ask;
+use cursive_table_view::TableView;
+use crate::orderbook_v::BasicColumn;
 
 pub struct Ui {
-    cursive: Cursive,
+    pub cursive: Cursive,
     ui_rx: mpsc::Receiver<UiMessage>,
     pub ui_tx: mpsc::Sender<UiMessage>,
     controller_tx: mpsc::Sender<ControllerMessage>,
@@ -17,7 +22,8 @@ pub enum UiMessage {
     StartMainLayer,
     ElectrumStarted((String, String, String)),
     OrderbookSelectCoin(String, Vec<String>),
-    OrderbookUpdateCoinSelect(String, String, String, String)
+    OrderbookUpdateCoinSelect(String, String, String, String),
+    UpdateOrderbook(Vec<Ask>)
 }
 
 impl Ui {
@@ -26,6 +32,7 @@ impl Ui {
 
         let mut cursive: Cursive = Cursive::default();
         let controller_tx_clone = controller_tx.clone();
+        let controller_tx_clone2 = controller_tx.clone();
 
         cursive.add_global_callback('q', move |s| {
             controller_tx_clone.send(ControllerMessage::StopMarketmaker);
@@ -38,6 +45,13 @@ impl Ui {
             ui_rx,
             controller_tx
         };
+
+        thread::spawn( move || {
+            loop {
+                controller_tx_clone2.send(ControllerMessage::UpdateOrderbook).unwrap();
+                thread::sleep(Duration::from_secs(5));
+            }
+        });
 
         // Create all views here, send a controller_tx along with it.
         // whenever a view needs updating, send a message to controller, which sends back
@@ -133,8 +147,16 @@ impl Ui {
                     });
 
                     self.cursive.pop_layer();
-                }
+                },
+                UiMessage::UpdateOrderbook(asks) => {
+                    self.cursive.call_on_name("ask-side", | tbl: &mut TableView<Ask, BasicColumn> | {
+                        tbl.clear();
 
+                        for ask in asks {
+                            tbl.insert_item(ask.to_owned())
+                        }
+                    });
+                }
             }
         }
 

@@ -5,6 +5,9 @@ use std::process::Command;
 use std::time::Duration;
 use std::fs::File;
 use serde::{Serialize, Deserialize};
+use cursive::Cursive;
+use cursive::traits;
+use cursive::views::Button;
 
 pub struct Controller {
     rx: mpsc::Receiver<ControllerMessage>,
@@ -19,7 +22,8 @@ pub enum ControllerMessage {
     ElectrumActivate(String),
     StopMarketmaker,
     SelectSide(String, String),
-    FetchEnabledCoins(String)
+    FetchEnabledCoins(String),
+    UpdateOrderbook
 }
 
 impl Controller {
@@ -37,6 +41,9 @@ impl Controller {
     }
 
     pub fn run(&mut self) {
+
+
+
         while self.ui.step() {
             // on each step, clear the message queue that the controller receives
             while let Some(message) = self.rx.try_iter().next() {
@@ -50,23 +57,25 @@ impl Controller {
                     },
                     ControllerMessage::StartMainLayer(passphrase) => {
                         let userhome = dirs::home_dir().expect("Unable to get userhome");
-                        let mm2_json = Mm2Json::create(
-                            &self.client.get_userpass(),
-                            passphrase.as_str(),
-                            userhome.to_str().unwrap()
-                        );
-
-                        mm2_json.create_mm2_json();
+                        let userpass = self.client.get_userpass().clone();
 
                         thread::spawn( move || {
+                            let mm2_json = Mm2Json::create(
+                                &userpass,
+                                passphrase.as_str(),
+                                userhome.to_str().unwrap()
+                            );
+
+                            mm2_json.create_mm2_json();
+
                             let _mm2client =
                                 Command::new("./marketmaker")
                                     .spawn()
                                     .expect("Failed to start");
-                        });
 
-                        thread::sleep(Duration::from_secs(1));
-                        std::fs::remove_file("MM2.json");
+                            thread::sleep(Duration::from_secs(1));
+                            std::fs::remove_file("MM2.json");
+                        });
 
                         self.ui
                             .ui_tx
@@ -107,6 +116,27 @@ impl Controller {
                     },
                     ControllerMessage::FetchEnabledCoins(side) => {
                         self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(side.into(), self.electrum_enabled.clone()));
+                    },
+                    ControllerMessage::UpdateOrderbook => {
+                        println!("Update me");
+                        let mut base = String::new();
+                        let mut rel = String::new();
+                        self.ui.cursive.call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
+                            base = String::from(btn.label());
+                            dbg!(&base);
+                        });
+                        self.ui.cursive.call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
+                            rel = String::from(btn.label());
+                            dbg!(&rel);
+
+                        });
+
+                        if !base.is_empty() && !rel.is_empty() && !rel.contains('<') && !base.contains('<') {
+                            let orderbook = self.client.orderbook(&base, &rel).unwrap();
+//                            dbg!(orderbook);
+                            let asks = orderbook.asks.unwrap().clone();
+                            self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks));
+                        }
                     }
                 }
             }
