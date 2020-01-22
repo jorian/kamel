@@ -41,9 +41,6 @@ impl Controller {
     }
 
     pub fn run(&mut self) {
-
-
-
         while self.ui.step() {
             // on each step, clear the message queue that the controller receives
             while let Some(message) = self.rx.try_iter().next() {
@@ -133,9 +130,10 @@ impl Controller {
 
                         if !base.is_empty() && !rel.is_empty() && !rel.contains('<') && !base.contains('<') {
                             let orderbook = self.client.orderbook(&base, &rel).unwrap();
-//                            dbg!(orderbook);
                             let asks = orderbook.asks.unwrap().clone();
-                            self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks));
+                            let bids = orderbook.bids.unwrap().clone();
+
+                            self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks, bids));
                         }
                     }
                 }

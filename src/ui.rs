@@ -6,7 +6,7 @@ use cursive::views::{TextArea, Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
 use std::thread;
 use std::time::Duration;
-use mmapi::types::response::Ask;
+use mmapi::types::response::{Ask, Bid};
 use cursive_table_view::TableView;
 use crate::orderbook_v::BasicColumn;
 
@@ -23,7 +23,7 @@ pub enum UiMessage {
     ElectrumStarted((String, String, String)),
     OrderbookSelectCoin(String, Vec<String>),
     OrderbookUpdateCoinSelect(String, String, String, String),
-    UpdateOrderbook(Vec<Ask>)
+    UpdateOrderbook(Vec<Ask>, Vec<Bid>)
 }
 
 impl Ui {
@@ -89,7 +89,6 @@ impl Ui {
                     self.cursive.add_layer(main_view);
                 },
                 UiMessage::ElectrumStarted((coin, address, balance)) => {
-                    // TODO add address in menu
                     self.cursive.call_on_name(&format!("electrum_balance_{}", &coin), |textview: &mut TextView| {
                         textview.set_content(&balance)
                     });
@@ -148,12 +147,20 @@ impl Ui {
 
                     self.cursive.pop_layer();
                 },
-                UiMessage::UpdateOrderbook(asks) => {
+                UiMessage::UpdateOrderbook(asks, bids) => {
                     self.cursive.call_on_name("ask-side", | tbl: &mut TableView<Ask, BasicColumn> | {
                         tbl.clear();
 
                         for ask in asks {
                             tbl.insert_item(ask.to_owned())
+                        }
+                    });
+
+                    self.cursive.call_on_name("bid-side", | tbl: &mut TableView<Bid, BasicColumn> | {
+                        tbl.clear();
+
+                        for bid in bids {
+                            tbl.insert_item(bid.to_owned())
                         }
                     });
                 }

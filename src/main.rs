@@ -21,10 +21,6 @@ use crate::controller::Controller;
 use std::process::Command;
 
 fn main() {
-    // userpass -> random generator
-//    let client = Arc::new(mmapi::Client::new("23y4g23g23jgjgjH3GJHGJKHg34"));
-    // marketmaker: marketmaker::Marketmaker::new().with_coins.etc.etc
-
     let controller = Controller::new();
     match controller {
         Ok(mut controller) => controller.run(),
