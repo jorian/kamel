@@ -56,15 +56,16 @@ impl Controller {
                         let userhome = dirs::home_dir().expect("Unable to get userhome");
                         let userpass = self.client.get_userpass().clone();
 
+
+                        let mm2_json = Mm2Json::create(
+                            &userpass,
+                            passphrase.as_str(),
+                            userhome.to_str().unwrap()
+                        );
+
+                        mm2_json.create_mm2_json();
+
                         thread::spawn( move || {
-                            let mm2_json = Mm2Json::create(
-                                &userpass,
-                                passphrase.as_str(),
-                                userhome.to_str().unwrap()
-                            );
-
-                            mm2_json.create_mm2_json();
-
                             let _mm2client =
                                 Command::new("./marketmaker")
                                     .spawn()
@@ -130,9 +131,10 @@ impl Controller {
 
                         if !base.is_empty() && !rel.is_empty() && !rel.contains('<') && !base.contains('<') {
                             let orderbook = self.client.orderbook(&base, &rel).unwrap();
-                            let asks = orderbook.asks.unwrap().clone();
-                            let bids = orderbook.bids.unwrap().clone();
-
+                            let mut asks = orderbook.asks.unwrap().clone();
+                            asks.sort_by(|a, b| a.price.parse::<f64>().unwrap().partial_cmp(&b.price.parse().unwrap()).unwrap());
+                            let mut bids = orderbook.bids.unwrap().clone();
+                            bids.sort_by(|a, b| b.price.parse::<f64>().unwrap().partial_cmp(&a.price.parse().unwrap()).unwrap());
                             self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks, bids));
                         }
                     }
