@@ -1,7 +1,7 @@
 use cursive::Cursive;
 use std::sync::mpsc;
 use crate::controller::ControllerMessage;
-use cursive::event::Key;
+use cursive::event::{Key, Event};
 use cursive::views::{TextArea, Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
 use std::thread;
@@ -9,6 +9,7 @@ use std::time::Duration;
 use mmapi::types::response::{Ask, Bid};
 use cursive_table_view::TableView;
 use crate::orderbook_v::BasicColumn;
+use std::process::Command;
 
 pub struct Ui {
     pub cursive: Cursive,
@@ -36,7 +37,19 @@ impl Ui {
 
         cursive.add_global_callback('q', move |s| {
             controller_tx_clone.send(ControllerMessage::StopMarketmaker);
+            println!("Stopped q");
             s.quit();
+        });
+
+        // cursive.on_event(Event::CtrlChar('c'))
+
+        cursive.add_global_callback(Event::Exit, move |_| {
+            println!("Stopped ctrl-c");
+            Command::new("pkill")
+                .arg("-15")
+                .arg("marketmaker")
+                .spawn()
+                .expect("failed to quit mm2");
         });
 
         let mut ui = Ui {
@@ -57,7 +70,6 @@ impl Ui {
         // whenever a view needs updating, send a message to controller, which sends back
         // the requested information
         let controller_tx_clone = ui.controller_tx.clone();
-
         ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
 
         ui.cursive.set_autorefresh(true);
@@ -79,7 +91,7 @@ impl Ui {
             match message {
                 UiMessage::Balance(balance) => {
                     let mut output = self.cursive
-                        .find_id::<TextView>("output")
+                        .find_name::<TextView>("output")
                         .unwrap();
                     output.set_content(balance);
                 },

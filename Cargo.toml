@@ -1,5 +1,5 @@
 [package]
-name = "mmtest"
+name = "kamel"
 version = "0.1.0"
 authors = ["jorian <jorian@outlook.com>"]
 edition = "2018"
