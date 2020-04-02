@@ -69,7 +69,7 @@ impl Controller {
                             let _mm2client =
                                 Command::new("./marketmaker")
                                     .spawn()
-                                    .expect("Failed to start");
+                                    .expect("Failed to start marketmaker binary. Does it exist?");
 
                             thread::sleep(Duration::from_secs(1));
                             std::fs::remove_file("MM2.json");

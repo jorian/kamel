@@ -50,6 +50,7 @@ impl Ui {
                 .arg("marketmaker")
                 .spawn()
                 .expect("failed to quit mm2");
+            println!("marketmaker killed");
         });
 
         let mut ui = Ui {
@@ -158,6 +159,21 @@ impl Ui {
                     });
 
                     self.cursive.pop_layer();
+
+                    let bid = self.cursive.call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
+                        btn.label().to_string()
+                    }).unwrap();
+
+                    let ask = self.cursive.call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
+                        btn.label().to_string()
+                    }).unwrap();
+
+                    println!("bid.{}",bid);
+                    println!("ask.{}",ask);
+
+                    if !bid.starts_with('<') && !ask.starts_with('<') {
+                        self.controller_tx.send(ControllerMessage::UpdateOrderbook);
+                    }
                 },
                 UiMessage::UpdateOrderbook(asks, bids) => {
                     self.cursive.call_on_name("ask-side", | tbl: &mut TableView<Ask, BasicColumn> | {
