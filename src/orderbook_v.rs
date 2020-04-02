@@ -36,7 +36,7 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                         .with_name("orderbook_ask_address")
                                 ))
                                 .child(DummyView.fixed_height(5))
-                                .child(TableView::<mmapi::response::Ask, BasicColumn>::new()
+                                .child({let mut view = TableView::<mmapi::response::Ask, BasicColumn>::new(); view.disable(); view}
                                     .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Right))
                                     .column(BasicColumn::Price, "Price", |c| {
                                         c.ordering(Ordering::Less).width_percent(40)
@@ -71,7 +71,7 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                         .with_name("orderbook_bid_address")
                                 ))
                                 .child(DummyView.fixed_height(5))
-                                .child(TableView::<mmapi::response::Bid, BasicColumn>::new()
+                                .child({let mut view = TableView::<mmapi::response::Bid, BasicColumn>::new(); view.disable(); view}
                                     .column(BasicColumn::Maxvolume, "Volume", |c| c.align(HAlign::Right))
                                     .column(BasicColumn::Price, "Price", |c| {
                                         c.ordering(Ordering::Less).width_percent(40)
