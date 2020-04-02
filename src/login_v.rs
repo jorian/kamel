@@ -40,9 +40,9 @@ impl LoginView {
                                 }))
                                 .child(DummyView)
                                 .child(Button::new("Next", move |siv| {
-                                    let pp = siv.find_id::<EditView>("passphrase").unwrap();
+                                    let pp = siv.find_name::<EditView>("passphrase").unwrap();
                                     let pp = pp.get_content().to_string();
-                                    controller_tx.send(ControllerMessage::StartMainLayer(pp));
+                                    controller_tx.send(ControllerMessage::StartMainLayer(pp)).unwrap();
                                 }))
                         }
                         ))

@@ -1,14 +1,11 @@
 use cursive::align::{HAlign};
 use std::cmp::Ordering;
-use cursive::views::{DummyView, LinearLayout, ResizedView, Button, Dialog, SelectView, TextView, Panel};
-use cursive::{Cursive, With};
+use cursive::views::{DummyView, LinearLayout, ResizedView, Button, TextView, Panel};
 use std::sync::{mpsc};
 use cursive::traits::{View, Identifiable, Boxable};
 use crate::controller::ControllerMessage;
-use cursive_aligned_view::{Alignable, AlignedView};
-use cursive::theme::Effect;
-use crate::coin_management::load_coins_file;
-use cursive_table_view::{TableView, TableColumn, TableViewItem};
+use cursive_aligned_view::AlignedView;
+use cursive_table_view::{TableView, TableViewItem};
 
 pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
     let controller_tx_clone = controller_tx.clone();
@@ -24,10 +21,10 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                 .child(
                                     LinearLayout::horizontal()
                                         .child(ResizedView::with_full_width(DummyView))
-                                        .child(ResizedView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                                        .child(ResizedView::with_fixed_height(1, Button::new("Select coin", move |_s| {
                                             controller_tx_clone
                                                 .clone()
-                                                .send(ControllerMessage::FetchEnabledCoins("ask".to_string()));
+                                                .send(ControllerMessage::FetchEnabledCoins("ask".to_string())).unwrap();
                                         }).with_name("orderbook_ask_select_btn")))
                                         .child(ResizedView::with_full_width(DummyView))
                                 )
@@ -59,10 +56,10 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                 .child(
                                     LinearLayout::horizontal()
                                         .child(ResizedView::with_full_width(DummyView))
-                                        .child(ResizedView::with_fixed_height(1, Button::new("Select coin", move |s| {
+                                        .child(ResizedView::with_fixed_height(1, Button::new("Select coin", move |_s| {
                                             controller_tx_clone2
                                                 .clone()
-                                                .send(ControllerMessage::FetchEnabledCoins("bid".to_string()));
+                                                .send(ControllerMessage::FetchEnabledCoins("bid".to_string())).unwrap();
                                         }).with_name("orderbook_bid_select_btn")))
                                         .child(ResizedView::with_full_width(DummyView))
                                 )

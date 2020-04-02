@@ -18,7 +18,6 @@ mod menu_v;
 mod orderbook_v;
 
 use crate::controller::Controller;
-use std::process::Command;
 
 fn main() {
     let controller = Controller::new();

@@ -1,5 +1,5 @@
 use cursive::traits::{View, Identifiable, Boxable};
-use cursive::views::{LinearLayout, ViewBox, StackView, Panel};
+use cursive::views::{LinearLayout, BoxedView, StackView, Panel};
 use crate::controller::ControllerMessage;
 use std::sync::mpsc;
 
@@ -16,7 +16,7 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
         .full_height();
 
     let main = LinearLayout::horizontal()
-        .child(Panel::new(ViewBox::new(menu)))
+        .child(Panel::new(BoxedView::new(menu)))
         .child(Panel::new(stack));
 
     Box::new(main)

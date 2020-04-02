@@ -34,8 +34,8 @@ pub fn create(controller_tx: mpsc::Sender<ControllerMessage>) -> Box<dyn View> {
                                 .child(ResizedView::with_fixed_width(3, DummyView))
                                 .child({
                                     let controller_clone = controller_tx.clone();
-                                    Button::new("activate", move |siv| {
-                                        controller_clone.send(ControllerMessage::ElectrumActivate(coin_clone.clone()));
+                                    Button::new("activate", move |_s| {
+                                        controller_clone.send(ControllerMessage::ElectrumActivate(coin_clone.clone())).unwrap();
                                     }).with_name(format!("electrum_activate_{}", String::from(&coin)))
                                 })
                                 .child(DummyView));

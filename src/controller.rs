@@ -5,8 +5,6 @@ use std::process::Command;
 use std::time::Duration;
 use std::fs::File;
 use serde::{Serialize, Deserialize};
-use cursive::Cursive;
-use cursive::traits;
 use cursive::views::Button;
 
 pub struct Controller {
@@ -17,7 +15,7 @@ pub struct Controller {
 }
 
 pub enum ControllerMessage {
-    FetchBalance(String),
+    // FetchBalance(String),
     StartMainLayer(String),
     ElectrumActivate(String),
     StopMarketmaker,
@@ -45,13 +43,13 @@ impl Controller {
             // on each step, clear the message queue that the controller receives
             while let Some(message) = self.rx.try_iter().next() {
                 match message {
-                    ControllerMessage::FetchBalance(coin) => {
-                        let balance = self.client.balance(&coin).unwrap();
-                        self.ui
-                            .ui_tx
-                            .send(UiMessage::Balance(balance.balance.unwrap()))
-                            .unwrap();
-                    },
+                    // ControllerMessage::FetchBalance(coin) => {
+                    //     let balance = self.client.balance(&coin).unwrap();
+                    //     self.ui
+                    //         .ui_tx
+                    //         .send(UiMessage::Balance(balance.balance.unwrap()))
+                    //         .unwrap();
+                    // },
                     ControllerMessage::StartMainLayer(passphrase) => {
                         let userhome = dirs::home_dir().expect("Unable to get userhome");
                         let userpass = self.client.get_userpass().clone();
@@ -72,7 +70,7 @@ impl Controller {
                                     .expect("Failed to start marketmaker binary. Does it exist?");
 
                             thread::sleep(Duration::from_secs(1));
-                            std::fs::remove_file("MM2.json");
+                            std::fs::remove_file("MM2.json").expect("couldn't remove MM2.json after startup");
                         });
 
                         self.ui
@@ -85,6 +83,7 @@ impl Controller {
 
                         if let Some(error) = electrum.error {
                             // tell the UI to show the error
+                            println!("{}", error);
                         } else {
                             self.electrum_enabled.push(coin.clone());
                             self.ui
@@ -94,26 +93,29 @@ impl Controller {
                         }
                     },
                     ControllerMessage::StopMarketmaker => {
-                        self.client.stop();
+                        self.client.stop().unwrap();
                     },
                     ControllerMessage::SelectSide(side, coin) => {
                         let balance = self.client.balance(&coin).unwrap();
                         if let Some(error) = balance.error {
                             // the error could be that the coin was not enabled.
                             // tell the UI to show the error
+                            println!("{}", error);
                         } else {
                             if !self.electrum_enabled.contains(&coin) {
-                                let electrum = self.client.electrum(&coin, true).unwrap();
+                                let _electrum = self.client.electrum(&coin, true).unwrap();
                             } else {
                                 let address = balance.address.unwrap();
                                 let balance = balance.balance.unwrap();
 
-                                self.ui.ui_tx.send(UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin));
+                                self.ui.ui_tx.send(UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin))
+                                    .unwrap();
                             }
                         }
                     },
                     ControllerMessage::FetchEnabledCoins(side) => {
-                        self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(side.into(), self.electrum_enabled.clone()));
+                        self.ui.ui_tx.send(UiMessage::OrderbookSelectCoin(side.into(), self.electrum_enabled.clone()))
+                            .unwrap();
                     },
                     ControllerMessage::UpdateOrderbook => {
                         println!("Update me");
@@ -135,7 +137,8 @@ impl Controller {
                             asks.sort_by(|a, b| a.price.parse::<f64>().unwrap().partial_cmp(&b.price.parse().unwrap()).unwrap());
                             let mut bids = orderbook.bids.unwrap().clone();
                             bids.sort_by(|a, b| b.price.parse::<f64>().unwrap().partial_cmp(&a.price.parse().unwrap()).unwrap());
-                            self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks, bids));
+                            self.ui.ui_tx.send(UiMessage::UpdateOrderbook(asks, bids))
+                                .unwrap();
                         }
                     }
                 }

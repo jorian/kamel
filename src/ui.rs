@@ -1,8 +1,8 @@
 use cursive::Cursive;
 use std::sync::mpsc;
 use crate::controller::ControllerMessage;
-use cursive::event::{Key, Event};
-use cursive::views::{TextArea, Dialog, TextView, SelectView, Button};
+use cursive::event::Event;
+use cursive::views::{Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
 use std::thread;
 use std::time::Duration;
@@ -19,7 +19,7 @@ pub struct Ui {
 }
 
 pub enum UiMessage {
-    Balance(String),
+    // Balance(String),
     StartMainLayer,
     ElectrumStarted((String, String, String)),
     OrderbookSelectCoin(String, Vec<String>),
@@ -36,7 +36,7 @@ impl Ui {
         let controller_tx_clone2 = controller_tx.clone();
 
         cursive.add_global_callback('q', move |s| {
-            controller_tx_clone.send(ControllerMessage::StopMarketmaker);
+            controller_tx_clone.send(ControllerMessage::StopMarketmaker).unwrap();
             println!("Stopped q");
             s.quit();
         });
@@ -90,12 +90,12 @@ impl Ui {
         while let Some(message) = self.ui_rx.try_iter().next() {
             // check which message
             match message {
-                UiMessage::Balance(balance) => {
-                    let mut output = self.cursive
-                        .find_name::<TextView>("output")
-                        .unwrap();
-                    output.set_content(balance);
-                },
+                // UiMessage::Balance(balance) => {
+                //     let mut output = self.cursive
+                //         .find_name::<TextView>("output")
+                //         .unwrap();
+                //     output.set_content(balance);
+                // },
                 UiMessage::StartMainLayer => {
                     let main_view = crate::main_v::create(self.controller_tx.clone());
                     self.cursive.pop_layer();
@@ -141,8 +141,8 @@ impl Ui {
 
                     sv.add_all_str(coins);
                     let controller_tx_clone = self.controller_tx.clone();
-                    sv.set_on_submit(move |siv, label: &str| {
-                        controller_tx_clone.send(ControllerMessage::SelectSide(side.clone(), label.into()))
+                    sv.set_on_submit(move |_s, label: &str| {
+                        controller_tx_clone.send(ControllerMessage::SelectSide(side.clone(), label.into())).unwrap();
                     });
 
                     self.cursive.add_layer(Dialog::around(sv)
@@ -172,7 +172,7 @@ impl Ui {
                     println!("ask.{}",ask);
 
                     if !bid.starts_with('<') && !ask.starts_with('<') {
-                        self.controller_tx.send(ControllerMessage::UpdateOrderbook);
+                        self.controller_tx.send(ControllerMessage::UpdateOrderbook).unwrap();
                     }
                 },
                 UiMessage::UpdateOrderbook(asks, bids) => {

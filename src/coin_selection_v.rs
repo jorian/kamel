@@ -1,14 +1,8 @@
 use cursive::views::{ResizedView, DummyView, Button, Panel, LinearLayout, SelectView, Dialog};
-use serde_json::Value;
-use std::fs;
-use std::fs::File;
-use std::collections::HashMap;
 use cursive::align::HAlign;
 use cursive::Cursive;
 use cursive::view::ViewWrapper;
-use std::io::Write;
 use cursive::traits::{Identifiable, Scrollable};
-use serde::{Serialize, Deserialize};
 use crate::coin_management::*;
 
 
@@ -43,7 +37,7 @@ impl CoinSelectionView {
             });
         }
 
-        fn close_coin_selection(mut siv: &mut Cursive) {
+        fn close_coin_selection(siv: &mut Cursive) {
             let mut selection: Vec<String> = vec![];
 
             siv.call_on_name("selected_coins", |view: &mut SelectView<String>| {

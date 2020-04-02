@@ -1,6 +1,6 @@
 use super::cursive::Cursive;
 use super::cursive::view::View;
-use super::cursive::views::{SelectView, StackView, LinearLayout, BoxView, TextView};
+use super::cursive::views::{ResizedView, SelectView, StackView, LinearLayout, TextView};
 use super::cursive::align::HAlign;
 //use super::cursive::traits::Identifiable;
 use super::cursive::view::Identifiable;
@@ -27,7 +27,7 @@ pub fn create() -> Box<dyn View> {
     main_menu.get_mut().set_on_select(change_view);
 
     let main_menu = LinearLayout::vertical()
-        .child(BoxView::with_full_height(main_menu))
+        .child(ResizedView::with_full_height(main_menu))
         .child(TextView::new("++++++++++++++"))
         .child(TextView::new("Q to quit"));
 
