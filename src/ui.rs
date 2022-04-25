@@ -1,15 +1,15 @@
-use cursive::Cursive;
-use std::sync::mpsc;
 use crate::controller::ControllerMessage;
-use cursive::event::Event;
-use cursive::views::{Dialog, TextView, SelectView, Button};
 use crate::login_v::LoginView;
+use crate::orderbook_v::BasicColumn;
+use cursive::event::Event;
+use cursive::views::{Button, Dialog, SelectView, TextView};
+use cursive::Cursive;
+use cursive_table_view::TableView;
+use mmapi::types::response::{Ask, Bid};
+use std::process::Command;
+use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use mmapi::types::response::{Ask, Bid};
-use cursive_table_view::TableView;
-use crate::orderbook_v::BasicColumn;
-use std::process::Command;
 
 pub struct Ui {
     pub cursive: Cursive,
@@ -24,7 +24,7 @@ pub enum UiMessage {
     ElectrumStarted((String, String, String)),
     OrderbookSelectCoin(String, Vec<String>),
     OrderbookUpdateCoinSelect(String, String, String, String),
-    UpdateOrderbook(Vec<Ask>, Vec<Bid>)
+    UpdateOrderbook(Vec<Ask>, Vec<Bid>),
 }
 
 impl Ui {
@@ -36,7 +36,9 @@ impl Ui {
         let controller_tx_clone2 = controller_tx.clone();
 
         cursive.add_global_callback('q', move |s| {
-            controller_tx_clone.send(ControllerMessage::StopMarketmaker).unwrap();
+            controller_tx_clone
+                .send(ControllerMessage::StopMarketmaker)
+                .unwrap();
             println!("Stopped q");
             s.quit();
         });
@@ -57,21 +59,22 @@ impl Ui {
             cursive,
             ui_tx,
             ui_rx,
-            controller_tx
+            controller_tx,
         };
 
-        thread::spawn( move || {
-            loop {
-                controller_tx_clone2.send(ControllerMessage::UpdateOrderbook).unwrap();
-                thread::sleep(Duration::from_secs(5));
-            }
+        thread::spawn(move || loop {
+            controller_tx_clone2
+                .send(ControllerMessage::UpdateOrderbook)
+                .unwrap();
+            thread::sleep(Duration::from_secs(5));
         });
 
         // Create all views here, send a controller_tx along with it.
         // whenever a view needs updating, send a message to controller, which sends back
         // the requested information
         let controller_tx_clone = ui.controller_tx.clone();
-        ui.cursive.add_layer(LoginView::new(controller_tx_clone.clone()));
+        ui.cursive
+            .add_layer(LoginView::new(controller_tx_clone.clone()));
 
         ui.cursive.set_autorefresh(true);
 
@@ -100,16 +103,18 @@ impl Ui {
                     let main_view = crate::main_v::create(self.controller_tx.clone());
                     self.cursive.pop_layer();
                     self.cursive.add_layer(main_view);
-                },
+                }
                 UiMessage::ElectrumStarted((coin, address, balance)) => {
-                    self.cursive.call_on_name(&format!("electrum_balance_{}", &coin), |textview: &mut TextView| {
-                        textview.set_content(&balance)
-                    });
+                    self.cursive.call_on_name(
+                        &format!("electrum_balance_{}", &coin),
+                        |textview: &mut TextView| textview.set_content(&balance),
+                    );
 
-                    self.cursive.call_on_name(&format!("electrum_coin_{}", &coin), |textview: &mut TextView| {
-                        textview.set_content(&address)
-                    });
-                },
+                    self.cursive.call_on_name(
+                        &format!("electrum_coin_{}", &coin),
+                        |textview: &mut TextView| textview.set_content(&address),
+                    );
+                }
                 UiMessage::OrderbookSelectCoin(side, coins) => {
                     let mut coins = coins.to_owned();
                     let mut label = String::new();
@@ -117,24 +122,29 @@ impl Ui {
                     match side.as_str() {
                         "ask" => {
                             coins.retain(|coin| {
-                                self.cursive.call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
-                                    label = String::from(btn.label());
-                                });
+                                self.cursive.call_on_name(
+                                    "orderbook_bid_select_btn",
+                                    |btn: &mut Button| {
+                                        label = String::from(btn.label());
+                                    },
+                                );
 
                                 coin.ne(&label)
                             });
-                        },
+                        }
                         "bid" => {
                             coins.retain(|coin| {
-                                self.cursive.call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
-                                    label = String::from(btn.label());
-                                });
+                                self.cursive.call_on_name(
+                                    "orderbook_ask_select_btn",
+                                    |btn: &mut Button| {
+                                        label = String::from(btn.label());
+                                    },
+                                );
 
                                 coin.ne(&label)
                             });
-                        },
-                        _ => unreachable!()
-
+                        }
+                        _ => unreachable!(),
                     }
 
                     let mut sv = SelectView::<String>::new();
@@ -142,55 +152,79 @@ impl Ui {
                     sv.add_all_str(coins);
                     let controller_tx_clone = self.controller_tx.clone();
                     sv.set_on_submit(move |_s, label: &str| {
-                        controller_tx_clone.send(ControllerMessage::SelectSide(side.clone(), label.into())).unwrap();
+                        controller_tx_clone
+                            .send(ControllerMessage::SelectSide(side.clone(), label.into()))
+                            .unwrap();
                     });
 
-                    self.cursive.add_layer(Dialog::around(sv)
-                        .title("Select")
-                        .button("Cancel", |siv| { siv.pop_layer(); }));
-                },
+                    self.cursive
+                        .add_layer(Dialog::around(sv).title("Select").button("Cancel", |siv| {
+                            siv.pop_layer();
+                        }));
+                }
                 UiMessage::OrderbookUpdateCoinSelect(side, balance, address, coin) => {
-                    self.cursive.call_on_name(&format!("orderbook_{}_address", &side), |tv: &mut TextView| {
-                        tv.set_content(format!("\n{}: {}", &address, &balance));
-                    });
+                    self.cursive.call_on_name(
+                        &format!("orderbook_{}_address", &side),
+                        |tv: &mut TextView| {
+                            tv.set_content(format!("\n{}: {}", &address, &balance));
+                        },
+                    );
 
-                    self.cursive.call_on_name(&format!("orderbook_{}_select_btn", &side),|btn: &mut Button| {
-                        btn.set_label_raw(&coin);
-                    });
+                    self.cursive.call_on_name(
+                        &format!("orderbook_{}_select_btn", &side),
+                        |btn: &mut Button| {
+                            btn.set_label_raw(&coin);
+                        },
+                    );
 
                     self.cursive.pop_layer();
 
-                    let bid = self.cursive.call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
-                        btn.label().to_string()
-                    }).unwrap();
+                    let bid = self
+                        .cursive
+                        .call_on_name("orderbook_bid_select_btn", |btn: &mut Button| {
+                            btn.label().to_string()
+                        })
+                        .unwrap();
 
-                    let ask = self.cursive.call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
-                        btn.label().to_string()
-                    }).unwrap();
+                    let ask = self
+                        .cursive
+                        .call_on_name("orderbook_ask_select_btn", |btn: &mut Button| {
+                            btn.label().to_string()
+                        })
+                        .unwrap();
 
-                    println!("bid.{}",bid);
-                    println!("ask.{}",ask);
+                    println!("bid.{}", bid);
+                    println!("ask.{}", ask);
 
                     if !bid.starts_with('<') && !ask.starts_with('<') {
-                        self.controller_tx.send(ControllerMessage::UpdateOrderbook).unwrap();
+                        self.controller_tx
+                            .send(ControllerMessage::UpdateOrderbook)
+                            .unwrap();
                     }
-                },
+                }
                 UiMessage::UpdateOrderbook(asks, bids) => {
-                    self.cursive.call_on_name("ask-side", | tbl: &mut TableView<Ask, BasicColumn> | {
-                        tbl.clear();
+                    dbg!(&asks);
+                    self.cursive.call_on_name(
+                        "ask-side",
+                        |tbl: &mut TableView<Ask, BasicColumn>| {
+                            tbl.clear();
 
-                        for ask in asks {
-                            tbl.insert_item(ask.to_owned())
-                        }
-                    });
+                            for ask in asks {
+                                tbl.insert_item(ask.to_owned())
+                            }
+                        },
+                    );
 
-                    self.cursive.call_on_name("bid-side", | tbl: &mut TableView<Bid, BasicColumn> | {
-                        tbl.clear();
+                    self.cursive.call_on_name(
+                        "bid-side",
+                        |tbl: &mut TableView<Bid, BasicColumn>| {
+                            tbl.clear();
 
-                        for bid in bids {
-                            tbl.insert_item(bid.to_owned())
-                        }
-                    });
+                            for bid in bids {
+                                tbl.insert_item(bid.to_owned())
+                            }
+                        },
+                    );
                 }
             }
         }

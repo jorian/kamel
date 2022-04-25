@@ -1,19 +1,21 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 
 pub fn get_current_coins_list() -> HashMap<String, Coin> {
-    let mut response = reqwest::get("https://raw.githubusercontent.com/jl777/coins/master/coins").expect("Unable to get coins json");
+    let mut response =
+        reqwest::get("https://raw.githubusercontent.com/komodoplatform/coins/master/coins")
+            .expect("Unable to get coins json");
     let list: Vec<Coin> = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
 
     let mut map = HashMap::new();
 
     for coin in list {
         map.insert(String::from(&coin.coin), coin);
-    };
+    }
 
     map
 }
@@ -22,10 +24,11 @@ pub fn get_mm2_coins() -> Vec<String> {
     let hm = get_current_coins_list();
     let values = hm.values().collect::<Vec<&Coin>>();
 
-    let strings = values.iter()
+    let strings = values
+        .iter()
         .filter(|coin| coin.mm2.is_some())
-        .map(|coin| coin.coin.clone()
-        ).collect::<Vec<String>>();
+        .map(|coin| coin.coin.clone())
+        .collect::<Vec<String>>();
 
     strings
 }
@@ -40,31 +43,40 @@ pub fn create_coins_file(vec: Vec<String>) {
     let selection = selection.values().collect::<Vec<_>>();
 
     let mut file = File::create("coins").unwrap();
-    file.write(serde_json::to_string(&selection).unwrap().as_bytes()).expect("could not create coins file");
+    file.write(serde_json::to_string(&selection).unwrap().as_bytes())
+        .expect("could not create coins file");
 }
 
 pub fn load_coins_file() -> Vec<String> {
     // if this is the first start and coins file doesn't exist yet:
     if let Err(_) = fs::read_to_string("coins") {
-        create_coins_file(
-            get_mm2_coins()
-        )
+        create_coins_file(get_mm2_coins())
     }
 
     let coins = fs::read_to_string("coins").expect("failed to read coins file");
     let list: Vec<Coin> = serde_json::from_str(&coins).unwrap();
 
     list.iter()
-        .map(|coin| coin.coin.clone() )
-        .collect::<Vec<String>>().to_owned()
+        .map(|coin| coin.coin.clone())
+        .collect::<Vec<String>>()
+        .to_owned()
 }
 
 pub(crate) fn get_electrum_coins() -> Vec<String> {
-    let mut response = reqwest::get("https://api.github.com/repos/jorian/coins/contents/electrums").expect("Unable to get list of electrums");
-    let list: Value = response.json().expect("unable to convert electrums to json");
-    let coinslist = list.as_array().expect("unable to convert electrum json Value to list");
+    let mut response =
+        reqwest::get("https://api.github.com/repos/komodoplatform/coins/contents/electrums")
+            .expect("Unable to get list of electrums");
+    let list: Value = response
+        .json()
+        .expect("unable to convert electrums to json");
+    let coinslist = list
+        .as_array()
+        .expect("unable to convert electrum json Value to list");
 
-    coinslist.iter()
+    dbg!(&coinslist);
+
+    coinslist
+        .iter()
         .map(|coin| coin["name"].as_str().unwrap().to_string())
         .collect::<Vec<String>>()
 }
@@ -108,4 +120,12 @@ pub struct Coin {
     pub taddr: Option<u16>,
     #[serde(rename = "nSPV", skip_serializing_if = "Option::is_none")]
     pub n_spv: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol: Option<Protocol>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Protocol {
+    #[serde(rename = "type")]
+    pub protocol_type: String,
 }
